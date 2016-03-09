@@ -1,4 +1,4 @@
-module.exports = function WebGL(option){
+function WebGL(option){
     "use strict;"
     var webgl = {},
         arg = option || {},
@@ -10,6 +10,8 @@ module.exports = function WebGL(option){
         attribute = arg.attribute || {},
         uniform = arg.uniform || {},
         varying = arg.varying || {},
+        texture = arg.texture || {},
+        framebuffer = arg.framebuff || {},
         vertMain = function(){},
         fragMain = function(){},
         ctx = null,
@@ -19,10 +21,13 @@ module.exports = function WebGL(option){
     canvas.width = width - padding.left - padding.right;
     canvas.height = height - padding.top - padding.bottom;
     canvas.style.position = "absolute";
+    canvas.style.border = "1px solid #000";
     canvas.style.left = padding.left + "px";
     canvas.style.top = padding.top + "px";
 
     ctx = setupWebGL(canvas);
+    ctx.getExtension("OES_texture_float");
+    ctx.getExtension("OES_texture_float_linear");
 
     document.getElementById(containerId).appendChild(canvas);
 
@@ -36,6 +41,18 @@ module.exports = function WebGL(option){
         ivec2   : ctx.uniform2i,
         ivec3   : ctx.uniform3i,
         ivec4   : ctx.uniform4i
+    }
+
+    function setupWebGL(canvas) {
+        var names = ["webgl", "experimental-webgl"];
+        var gl = null;
+        for (var i = 0; i < names.length; ++i) {
+            try {
+                gl = canvas.getContext(names[i]);
+            } catch(e) {}
+            if (gl) break;
+        }
+        return gl;
     }
 
     function setUniform(type, location, value) {
@@ -76,33 +93,48 @@ module.exports = function WebGL(option){
         }
     }
 
-    function setupWebGL(canvas) {
-        var names = ["webgl", "experimental-webgl"];
-        var gl = null;
-        for (var i = 0; i < names.length; ++i) {
-            try {
-                gl = canvas.getContext(names[i]);
-            } catch(e) {}
-            if (gl) break;
-        }
-        return gl;
-    }
-
     function setAttribute(name, value) {
         if(Array.isArray(value) || ArrayBuffer.isView(value)){
-            var size = parseInt(attribute[name].type.slice(3,4)) || 1;
-            attribute[name].location = ctx.getAttribLocation(program, name);
-            attribute[name].buffer = ctx.createBuffer();
-            ctx.bindBuffer(ctx.ARRAY_BUFFER, attribute[name].buffer);
-            ctx.enableVertexAttribArray(attribute[name].location);
-            ctx.vertexAttribPointer(attribute[name].location, size, ctx.FLOAT, false, 0, 0);
-            ctx.bufferData(ctx.ARRAY_BUFFER, value, ctx.STATIC_DRAW);
-        }
+            ctx.bindBuffer(ctx.ARRAY_BUFFER, attribute[name].ptr);
+            if(attribute[name].value != value){
+                // console.log("set attribute buffer");
+                ctx.bufferData(ctx.ARRAY_BUFFER, value, ctx.STATIC_DRAW);
+                attribute[name].value = value;
+            }
 
+        }
     }
 
-    webgl.attr = webgl.attribute = function(type, name, value) {
-        attribute[name] = {type: type, value: value, location: null, buffer: null};
+    function linkAttribute(name) {
+        var size = parseInt(attribute[name].type.slice(3,4)) || 1;
+        // ctx.bindBuffer(ctx.ARRAY_BUFFER, attribute[name].ptr);
+        attribute[name].location = ctx.getAttribLocation(program, name);
+        ctx.vertexAttribPointer(attribute[name].location, size, ctx.FLOAT, false, 0, 0);
+        ctx.enableVertexAttribArray(attribute[name].location);
+    }
+
+    function setTexture(name, tex){
+        if(Array.isArray(tex) || ArrayBuffer.isView(tex)){
+            // if(tex instanceof Float32Array != true)
+            //     tex = new Float32Array(tex);
+
+            ctx.bindTexture(ctx.TEXTURE_2D, texture[name].ptr);
+            ctx.texImage2D(ctx.TEXTURE_2D, 0, ctx.ALPHA, texture[name].dim[0], texture[name].dim[1], 0, ctx.ALPHA, ctx.FLOAT, tex);
+            texture[name].value = tex;
+            // ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_MAG_FILTER, ctx.LINEAR);
+            // ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_MIN_FILTER, ctx.LINEAR);
+            ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_MIN_FILTER, ctx.NEAREST);
+            ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_MAG_FILTER, ctx.NEAREST);
+            ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_WRAP_S, ctx.CLAMP_TO_EDGE);
+            ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_WRAP_T, ctx.CLAMP_TO_EDGE);
+            ctx.bindTexture(ctx.TEXTURE_2D, null);
+        }
+    }
+
+    webgl.attribute = function(type, name, value) {
+        attribute[name] = {type: type, value: null, location: null, ptr: ctx.createBuffer()};
+
+        setAttribute(name, value);
 
         Object.defineProperty(webgl.attribute, name, {
             get: function() { return attribute[name];},
@@ -112,14 +144,13 @@ module.exports = function WebGL(option){
         });
 
         return webgl;
-
     };
 
-    webgl.unif = webgl.uniform = function(type, name, value) {
+    webgl.uniform = function(type, name, value) {
         uniform[name] = {type: type, value: value, location: null};
 
         Object.defineProperty(webgl.uniform, name, {
-            get: function() { return uniform[name];},
+            get: function() { return uniform[name]; },
             set: function(value) {
                 uniform[name].location = ctx.getUniformLocation(program, name);
                 uniform[name].value = value;
@@ -130,10 +161,57 @@ module.exports = function WebGL(option){
         return webgl;
     };
 
-    webgl.vary = webgl.varying = function(type, name) {
+    webgl.varying = function(type, name) {
         varying[name] = {type: type, value: null, location: null};
         return webgl;
     };
+
+    webgl.texture = function(type, name, value, dim){
+        texture[name] = {type: type, value: null, location: null, ptr: ctx.createTexture(), dim: dim};
+        setTexture(name, value);
+        Object.defineProperty(webgl.texture, name, {
+            get: function() { return texture[name];},
+            set: function(texArray) {
+                setTexture(name, texArray);
+            }
+        });
+
+        return webgl;
+    }
+
+    webgl.framebuffer = function(name, w, h) {
+        // framebuffer[name] = {width: w, height: h, ptr: ctx.createFrameBuffer()};
+        framebuffer[name] = ctx.createFrameBuffer();
+        framebuffer[name].width = w || 1024;
+        framebuffer[name].height = h || 1024;
+
+        ctx.bindFramebuffer(ctx.FRAMEBUFFER, framebuffer[name]);
+
+        texture[name] = {
+            ptr: ctx.createTexture(),
+            dim: [framebuffer[name].width,framebuffer[name].height],
+            type: type,
+            value: null,
+            location: null
+        };
+
+        ctx.bindTexture(ctx.TEXTURE_2D, rttTexture);
+        ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_MAG_FILTER, ctx.LINEAR);
+        ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_MIN_FILTER, ctx.LINEAR_MIPMAP_NEAREST);
+        ctx.generateMipmap(gl.TEXTURE_2D);
+        ctx.texImage2D(ctx.TEXTURE_2D, 0, ctx.RGBA, framebuffer[name].width, framebuffer[name].height, 0, ctx.RGBA, ctx.UNSIGNED_BYTE, null);
+
+        var renderbuffer = ctx.createRenderbuffer();
+        ctx.bindRenderbuffer(ctx.RENDERBUFFER, renderbuffer);
+        ctx.renderbufferStorage(ctx.RENDERBUFFER, ctx.DEPTH_COMPONENT16, rttFramebuffer.width, rttFramebuffer.height);
+
+        ctx.framebufferTexture2D(ctx.FRAMEBUFFER, ctx.COLOR_ATTACHMENT0, ctx.TEXTURE_2D, rttTexture, 0);
+        ctx.framebufferRenderbuffer(ctx.FRAMEBUFFER, ctx.DEPTH_ATTACHMENT, ctx.RENDERBUFFER, renderbuffer);
+
+        ctx.bindTexture(ctx.TEXTURE_2D, null);
+        ctx.bindRenderbuffer(ctx.RENDERBUFFER, null);
+        ctx.bindFramebuffer(ctx.FRAMEBUFFER, null);
+    }
 
     webgl.vertMain = function(f){
         vertMain = f;
@@ -145,11 +223,97 @@ module.exports = function WebGL(option){
         return webgl;
     }
 
-    function toGLSL(src){
-        return "void main() " + src.toString().replace(/function.+{/, '{').replace(/\$(.*?)\./g, "$1 ");
+    webgl.shader = function(arg){
+        var shader = {},
+            option = arg || {},
+            shaderType = option.type || null,
+            deps = option.require || [],
+            env = option.env || {},
+            fbo = option.fbo || {},
+            shaderFunction = option.function ||  {};
+
+        shader.vertex = function() {
+            shaderType = ctx.VERTEX_SHADER;
+            return shader;
+        }
+
+        shader.fragment = function() {
+            shaderType = ctx.FRAGMENT_SHADER;
+            return shader;
+        }
+
+        shader.require = function(d) {
+            if(Array.isArray(deps)) deps = d;
+            else deps = [d];
+            return shader;
+        }
+
+        shader.function = function(type, name, fn){
+            shaderFunction[name] = {type: type, fn: fn};
+            return shader;
+        }
+
+        shader.env = function(pairs) {
+            Object.keys(pairs).forEach(function(k){
+                env[k] = pairs[k] ;
+            });
+            return shader;
+        }
+
+        shader.framebuffer = function(name, w, h){
+            if(!(name in framebuffer))
+                webgl.framebuffer(name, w, h);
+            else
+                fbo = framebuffer[name];
+        }
+
+        shader.init = function() {
+            var shaderSource = "precision highp float;\n";
+
+            deps.forEach(function(dep){
+                if(attribute.hasOwnProperty(dep)) {
+                    shaderSource += "attribute " + attribute[dep].type + " " + dep + ";\n";
+                } else if(uniform.hasOwnProperty(dep)) {
+                    shaderSource += "uniform " + uniform[dep].type + " " + dep + ";\n";
+                } else if(texture.hasOwnProperty(dep)) {
+                    shaderSource += "uniform " + texture[dep].type + " " + dep + ";\n";
+                } else if(varying.hasOwnProperty(dep)) {
+                    shaderSource += "varying " + varying[dep].type + " " + dep + ";\n";
+                }
+            });
+
+            for(var f in shaderFunction) {
+                shaderSource += toGLSL(shaderFunction[f].type, f, shaderFunction[f].fn, env);
+            }
+
+            console.log(shaderSource, env);
+
+            var _shader = compile(shaderType, shaderSource);
+            _shader._shaderType = shaderType;
+            return _shader;
+        }
+
+        return shader;
     }
 
-    function compile(shaderSource, shaderType) {
+    function applyEnvParameters(str, mapping){
+        //find all $(...) and replace them with env params in mapping
+        var re = new RegExp("\\$\\(("+Object.keys(mapping).join("|")+")\\)","g");
+        return str.replace(re, function(matched){
+            return mapping[matched.slice(2,matched.length-1)];
+        });
+    }
+
+    function toGLSL(returnType, name, fn, mapping){
+        var glsl = fn.toString();
+        if(mapping) glsl = applyEnvParameters(glsl,  mapping);
+        return returnType + " " +
+            name + "(" + glsl
+            .replace(/\$(.*?)\./g, "$1 ")
+            .replace(/function.+\((.*?){/, '$1{') + "\n";
+    }
+
+    function compile(shaderType, shaderSource) {
         if (shaderType !== ctx.VERTEX_SHADER && shaderType !== ctx.FRAGMENT_SHADER) {
             throw ("Error: unknown shader type");
         }
@@ -170,30 +334,10 @@ module.exports = function WebGL(option){
         return _shader;
     }
 
-    webgl.init = function(){
-        var vertSrc = "precision mediump float;",
-            fragSrc = "precision mediump float;";
-
-        for(var a in attribute) {
-            vertSrc += "attribute " + attribute[a].type + " " + a + ";";
-        }
-        for(var u in uniform){
-            var line = "uniform " + uniform[u].type + " " + u + ";";
-            vertSrc += line;
-            fragSrc += line;
-        }
-        for(var v in varying){
-            var line = "varying " + varying[v].type + " " + v + ";";
-            vertSrc += line;
-            fragSrc += line;
-        }
-
-        vertSrc += toGLSL(vertMain);
-        fragSrc += toGLSL(fragMain);
-
+    webgl.program = function(shaders) {
         program = ctx.createProgram();
-        ctx.attachShader(program, compile(vertSrc, ctx.VERTEX_SHADER));
-        ctx.attachShader(program, compile(fragSrc, ctx.FRAGMENT_SHADER));
+        ctx.attachShader(program, shaders[0]);
+        ctx.attachShader(program, shaders[1]);
         ctx.linkProgram(program);
         var linked = ctx.getProgramParameter(program, ctx.LINK_STATUS);
         if (!linked) {
@@ -203,10 +347,13 @@ module.exports = function WebGL(option){
             return null;
         }
         ctx.useProgram(program);
+
         for(var ai in attribute) {
             if(attribute[ai].value)
-                setAttribute(ai, attribute[ai].value);
+                linkAttribute(ai);
+                // setAttribute(ai, attribute[ai].value);
         }
+
         for(var ui in uniform){
             if(uniform[ui].value) {
                 uniform[ui].location = ctx.getUniformLocation(program, ui);
@@ -214,11 +361,51 @@ module.exports = function WebGL(option){
             }
         }
 
+        Object.keys(texture).forEach(function(t, i){
+            if(texture[t].value) {
+                // setTexture(t, texture[t].value);
+                ctx.activeTexture(ctx.TEXTURE0 + i);
+                ctx.bindTexture(ctx.TEXTURE_2D, texture[t].ptr);
+                texture[t].location = ctx.getUniformLocation(program, t);
+                ctx.uniform1i(texture[t].location, i);
+            }
+        });
+
         return ctx;
     }
 
-    webgl.test = function(){
-        return uniform;
+    webgl.init = function(){
+        var vertSrc = "precision highp float;",
+            fragSrc = "precision highp float;";
+
+        for(var a in attribute) {
+            vertSrc += "attribute " + attribute[a].type + " " + a + ";";
+        }
+        for(var u in uniform){
+            var line = "uniform " + uniform[u].type + " " + u + ";";
+            vertSrc += line;
+            fragSrc += line;
+        }
+
+        for(var t in texture){
+            var line = "uniform " + texture[t].type + " " + t + ";";
+            vertSrc += line;
+            fragSrc += line;
+        }
+        for(var v in varying){
+            var line = "varying " + varying[v].type + " " + v + ";";
+            vertSrc += line;
+            fragSrc += line;
+        }
+
+        vertSrc += toGLSL("void", "main", vertMain);
+        fragSrc += toGLSL("void", "main", fragMain);
+
+        // console.log(vertSrc, fragSrc);
+
+        webgl.program([compile(ctx.VERTEX_SHADER, vertSrc), compile(ctx.FRAGMENT_SHADER, fragSrc)]);
+
+        return ctx;
     }
 
     return webgl;

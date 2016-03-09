@@ -1,0 +1,174 @@
+<html>
+    <head>
+        <script src="../src/webgl/webgl.js"></script>
+        <script src="i2v.js"></script>
+        <style>
+        svg {
+            border: 1px solid #000;
+            overflow: scroll;
+        }
+        </style>
+    </head>
+
+    <body>
+        <h1>Testing</h1>
+        <div id="test">
+
+        </div>
+
+    <script>
+
+    var ajax = i2v.io.ajax(),
+        parser = i2v.io.parser;
+
+   ajax.get({
+       url: "dragonfly-routers-nonmin.csv",
+       dataType: "text"
+   }).then(function(csv){
+     // console.log(data);
+       var data = i2v.io.aoo({
+           array   : parser.parseDSV(csv, ','),
+           header  : ["rank", "busy_time", "traffic", "timestamp"],
+           types   : ['int', 'float', 'float', 'float'],
+        //    skip    : 0
+       });
+
+       var vmap = {x:"timestamp", y: "rank", t:"traffic", b: "busy_time"};
+       var stats = i2v.dataopt.stats(data, Object.keys(vmap).map(function(k){return vmap[k];}));
+       var ts = data.filter(function(d) {return d.rank == 0;}).map(function(d){ return d.timestamp});
+       var ranks = data.filter(function(d){return d.timestamp==ts[0];}).map(function(d){ return d.rank});
+
+       var vArray = new Float32Array(data.length*2);
+       var len = data.length;
+       for(var ii = 0; ii<len; ii++){
+           vArray[ii*2] = data[ii][vmap.x];
+           vArray[ii*2+1] = data[ii][vmap.y];
+       }
+
+       var texWidth = Math.pow(2, Math.ceil(Math.log2(ts.length))),
+           texHeight = Math.pow(2, Math.ceil(Math.log2(ranks.length)));
+
+       console.log("texSize", texWidth, texHeight, ts.length, ranks.length);
+       var texArray = { traffic: new Float32Array(texWidth*texHeight), busyTime: new Float32Array(texWidth*texHeight) };
+
+       var start = new Date();
+       for(var i = 0; i < ranks.length ; i++){
+           for(var j = 0; j < ts.length; j++){
+               texArray.busyTime[i*texWidth+j] = (data[i*ts.length+j][vmap.b] - stats[vmap.b].min) / (stats[vmap.b].max - stats[vmap.b].min);
+               texArray.traffic[i*texWidth+j] = (data[i*ts.length+j][vmap.t] - stats[vmap.t].min) / (stats[vmap.t].max - stats[vmap.t].min);
+            //    texArray[i*texWidth+j] = data[i*ts.length+j][vmap.t];
+           }
+       }
+       console.log(new Date() - start);
+
+    //    console.log(texArray);
+       var webgl = WebGL({
+           container: "test",
+           height: 600,
+           width: 1200,
+           padding: {left: 50, right: 0, top: 50, bottom: 50}
+       });
+
+       function mainVert(){
+           $float.px = (pos.x - xDomain.x) / (xDomain.y - xDomain.x) * 2.0 - 1.0;
+           $float.py = (pos.y - yDomain.x) / (yDomain.y - yDomain.x);
+
+           $float.s = (pos.x - xDomain.x) / (u_tw - xDomain.x);
+           $float.t = (pos.y - yDomain.x) / (u_th - yDomain.x);
+           $float.c = texture2D($(variable), vec2(s, t)).a * 2.0 - 1.0;
+        //    gl_PointSize = c;
+           gl_Position = vec4(px, c, 0.0, 1.0);
+       }
+
+       function mainVert2(){
+           $float.px = (pos.x - xDomain.x) / (xDomain.y - xDomain.x) * 2.0 - 1.0;
+           $float.py = (pos.y - yDomain.x) / (yDomain.y - yDomain.x);
+
+           $float.s = (pos.x - xDomain.x) / (u_tw - xDomain.x);
+           $float.t = (pos.y - yDomain.x) / (u_th - yDomain.x);
+           $float.c = texture2D(busyTime, vec2(s, t)).a * 2.0 - 1.0;
+        //    gl_PointSize = c;
+           gl_Position = vec4(px, c, 0.0, 1.0);
+       }
+
+
+    //    var gl = webgl.uniform("vec2", "xDomain", [stats[vmap.x].min, stats[vmap.x].max])
+    //        .uniform("vec2", "yDomain", [stats[vmap.y].min, stats[vmap.y].max])
+    //        .uniform("vec4", "u_color", [0.25, 0.545, 0.667, 1.0])
+    //        .uniform("float", "u_tw", ts[0]*texWidth)
+    //        .uniform("float", "u_th", texHeight)
+    //        .attribute("vec2", "pos",  vArray)
+    //        .texture("sampler2D", "traffic", texArray.traffic, [texWidth, texHeight])
+    //        .vertMain(mainVert)
+    //        .fragMain(function() {gl_FragColor = u_color;})
+    //        .init();
+       var selectedVariable = "traffic";
+
+       webgl.uniform("vec2", "xDomain", [stats[vmap.x].min, stats[vmap.x].max])
+           .uniform("vec2", "yDomain", [stats[vmap.y].min, stats[vmap.y].max])
+           .uniform("vec4", "u_color", [0.25, 0.545, 0.667, 1.0])
+           .uniform("float", "u_tw", ts[0]*texWidth)
+           .uniform("float", "u_th", texHeight)
+           .attribute("vec2", "pos",  vArray)
+           .texture("sampler2D", "traffic", texArray.traffic, [texWidth, texHeight])
+           .texture("sampler2D", "busyTime", texArray.busyTime, [texWidth, texHeight]);
+
+       var vs = webgl.shader()
+           .vertex()
+           .require(['xDomain', "yDomain", "pos", "u_tw", "u_th", selectedVariable])
+           .env({test: "abc", variable: selectedVariable})
+           .function("void", "main", mainVert)
+           .init();
+
+
+       var fs = webgl.shader().fragment().require(["u_color"]).function("void", "main", function(){gl_FragColor = u_color;}).init();
+
+       var gl = webgl.program([vs, fs]);
+
+       var test = document.getElementById('test');
+       test.onclick = function(e) {
+           var start = new Date();
+           var vs = webgl.shader()
+               .vertex()
+               .require(['xDomain', "yDomain", "pos", "u_tw", "u_th", "busyTime"])
+               .env({variable: "busyTime"})
+               .function("void", "main", mainVert).init();
+
+           var gl = webgl.program([vs, fs]);
+           var pointsTotal = vArray.length/2,
+               pointsPerLine = ts.length;
+
+               // gl.drawArrays(gl.LINE_STRIP, 0, pointsPerLine);
+           gl.viewport(0, 0, width, height/3);
+           for(var ii = 0; ii < vArray.length/2; ii += pointsPerLine){
+               gl.drawArrays(gl.LINE_STRIP, ii, pointsPerLine);
+           }
+
+           console.log(new Date() - start, "ms delay for redering");
+       }
+
+    //    console.log(vs2, fs);
+
+       console.log(gl.getParameter(gl.MAX_TEXTURE_SIZE));
+
+       gl.viewport(0, height/2, width, height/3);
+        var pointsTotal = vArray.length/2,
+            pointsPerLine = ts.length;
+
+            // gl.drawArrays(gl.LINE_STRIP, 0, pointsPerLine);
+
+        for(var ii = 0; ii < vArray.length/2; ii += pointsPerLine){
+            gl.drawArrays(gl.LINE_STRIP, ii, pointsPerLine);
+        }
+
+        // console.log("primcount", pointsTotal/pointsPerLine);
+        // var ext = gl.getExtension('ANGLE_instanced_arrays');
+        // console.log(gl.getExtension("WEBGL_shared_resources"));
+        // ext.drawArraysInstancedANGLE(gl.LINE_STRIP, 0, pointsTotal,  pointsTotal/pointsPerLine);
+
+
+   })
+
+    </script>
+    </body>
+</html>
