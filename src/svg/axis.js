@@ -1,3 +1,5 @@
+var d3s = require('d3-scale');
+
 module.exports = function Axis(arg) {
     var option      = arg || {},
         // margin = option.margin || {left: 0, right: 0, top: 0, bottom: 0},
@@ -15,6 +17,7 @@ module.exports = function Axis(arg) {
         scale       = option.scale || "linear",
         metric      = option.metric || null,
         domain      = option.domain || [0,1],
+        exponet     = option.exponet || 1,
         range       = option.range || null,
         padding     = {left: 0, right: 0, top: 0, bottom: 0},
         styles      = {stroke: color, 'stroke-width': 0.5},
@@ -27,7 +30,13 @@ module.exports = function Axis(arg) {
     }
 
     if (metric === null) {
-        metric = new Metric().scale(scale).domain(domain).range(range);
+        if(scale == "linear") {
+            metric = new Metric().scale(scale).domain(domain).range(range);
+        } else {
+            metric = d3s.scalePow().exponent(exponent).domain(domain).range(range);
+            metric.value = metric;
+        }
+
     } else {
         domain = metric.domain();
     }
