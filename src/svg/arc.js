@@ -1,4 +1,6 @@
-module.exports = function Arc(arg) {
+if(typeof(define) == "function") define(function(){return Arc;});
+
+function Arc(arg) {
     "use strict";
 
     var width = arg.width || 300,
@@ -15,8 +17,8 @@ module.exports = function Arc(arg) {
     //Polar to Cartersian
     function p2c(r, d){
         return [
-            center[0] + r*Math.cos(d),
-            center[1] + r*Math.sin(d)
+            center[0] + r*Math.cos(d- Math.PI / 2),
+            center[1] + r*Math.sin(d- Math.PI / 2)
         ].join(" ");
     }
 

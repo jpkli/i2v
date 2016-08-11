@@ -1,5 +1,7 @@
-module.exports = (function(){
+if (typeof(define) !== 'function') var define = require('amdefine')(module);
 
+define(function(require){
+    "use strict";
     var root            = this,
         debug           = true,
         registry        = {},
@@ -107,4 +109,4 @@ module.exports = (function(){
 
     return NewClass;
 
-}());
+});
