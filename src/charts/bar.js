@@ -2,13 +2,14 @@ if (typeof(define) !== 'function') var define = require('amdefine')(module);
 
 define(function(require){
     "use strict";
-    var svg = require("../svg/svg"),
+    var svg = require("../svg"),
         Axis = require('../svg/axis'),
         Viz = require('../viz'),
         scale = require('../metric');
 
     return Viz.extend(function(option){
-        var barWidth = this.$height / (this.data.length),
+        var barHeight = this.$height / (this.data.length),
+            barPadding = option.barPadding || 0.2,
             barChart = this.$svg(),
             vmap = option.vmap,
             domain = option.domain,
@@ -36,6 +37,7 @@ define(function(require){
             align: "left",
             ticks: this.data.length,
             tickInterval: "fit",
+            tickAlign: "end",
             labelPos: {x: -20, y: -4},
             format: d3.format(".3s")
         });
@@ -44,10 +46,10 @@ define(function(require){
 
         bars.render({
             mark: "rect",
-            y: function(d) { return y(d[vmap.y]) + barWidth * 0.05; },
-            // y: function(d, i) { return (i + 0.05) * barWidth; },
+            y: function(d) { return y(d[vmap.y]) + barHeight * barPadding/2; },
+            // y: function(d, i) { return (i + 0.05) * barHeight; },
             x: 0,
-            height: barWidth * 0.9,
+            height: barHeight * (1-barPadding),
             width: function(d){ return x(d[vmap.size]); },
             fill: "steelblue"
         })(this.data);

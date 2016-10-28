@@ -2,7 +2,21 @@ if (typeof(define) !== 'function') var define = require('amdefine')(module);
 
 define(function(require){
     var Class = require("./class"),
-        Svg = require('./svg/svg');
+        Svg = require('./svg/svg'),
+        stats = require('p4/dataopt/stats'),
+        scale = require('./scale');
+
+    function assign(object, source) {
+        Object.keys(source).forEach(function(key) {
+            object["$"+key] = source[key];
+        });
+    }
+
+    var defaultProperties = {
+        width: 400,
+        height: 300,
+        padding: {left: 0, right: 0, top: 0, bottom: 0},
+    }
 
     return Class.create(function Viz(arg){
         "use strict";
@@ -11,14 +25,24 @@ define(function(require){
         var viz = this,
             option = arg || {},
             containerId = option.container || "body",
-            container;
+            container,
+            layers = [];
 
         /* Protected */
-        this.$width = option.width || 400;
-        this.$height = option.height || 300;
-        this.$padding = option.padding || {left: 0, right: 0, top: 0, bottom: 0};
-        this.$domain = option.domain;
+        // this.$width = option.width || 400;
+        // this.$height = option.height || 300;
+        // this.$padding = option.padding || {left: 0, right: 0, top: 0, bottom: 0};
+        // this.$domain = option.domain;
+        // this.$size = function() {};
+        // this.$color = function() {};
+        // this.$alpha = function() {};
+        //
+        assign(viz, defaultProperties);
+        assign(viz, option);
 
+        viz.set = function(props) {
+            assign(viz, props);
+        }
 
         this.$width -= (this.$padding.left + this.$padding.right);
         this.$height -= (this.$padding.top + this.$padding.bottom);
@@ -39,8 +63,7 @@ define(function(require){
         this.data = option.data || [];
         this.div = document.createElement("div");
         this.svg = [];
-        this.webgl = [];
-
+        this.canvas = [];
         this.init = function(){
             container = (containerId == "body") ? document.body : document.getElementById(containerId);
 
@@ -58,13 +81,20 @@ define(function(require){
         };
 
         this.viz = function() {
-            viz.webgl.forEach(function(g){
-                viz.div.appendChild(g);
-            })
+            viz.canvas.forEach(function(layer){
+                viz.div.appendChild(layer);
+            });
             viz.svg.forEach(function(g){
                 viz.div.appendChild(g);
             });
         }
+
+        this.addLayer = function(layer) {
+            if(layer.tagName == "canvas") viz.canvas.push(layer);
+            else viz.svg.push(layer);
+        }
+
+        this.render = this.viz;
 
         this.css = function(style){
             for(var key in style){
@@ -80,18 +110,22 @@ define(function(require){
 
         this.append = function(m) {
             if(m.tagName == "svg") this.svg.push(m);
-            if(m.tagName == "canvas") this.webgl.push(m)
-        }
+            if(m.tagName == "canvas") this.webgl.push(m);
+        };
 
         this.prepend = function(m) {
             if(m.tagName == "svg") this.svg = [m].concat(this.svg);
             if(m.tagName == "canvas") this.webgl = [m].concat(this.webgl);
-        }
+        };
 
         this.destroy = function() {
             this._super.destroy();
             container.removeChild(this.div);
             div = null;
+        };
+
+        this.encode = function(attr, feature, scale) {
+
         };
 
         return viz.init();

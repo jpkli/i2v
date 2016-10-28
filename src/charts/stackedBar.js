@@ -1,8 +1,6 @@
-if (typeof(define) !== 'function') var define = require('amdefine')(module);
-
 define(function(require){
     "use strict";
-    var svg = require("../svg/svg"),
+    var svg = require("../svg"),
         Axis = require('../svg/axis'),
         Viz = require('../viz'),
         scale = require('../metric');
@@ -64,7 +62,7 @@ define(function(require){
 
         });
         bars.translate(this.$padding.left, this.$padding.top);
-
+        
         this.svg.push(barChart);
         this.viz();
 

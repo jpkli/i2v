@@ -2,21 +2,16 @@ if (typeof(define) !== 'function') var define = require('amdefine')(module);
 
 define(function(require){
     "use strict";
-    var root            = this,
-        debug           = true,
-        registry        = {},
-        $protected      = {},
-        base = (function(){
-            var $objId = 101,
-                classBase = function(){
-                    $protected[$objId] = {};
-                    this.objId = $objId;
-                    this._protected = function(){ return $protected[$objId]; };
-                    this.destroy = function(){ delete $protected[this.objId]; };
-                    $objId++;
-                };
-            return classBase;
-        }());
+    var objId           = 1,
+        protectedSpace  = {};
+
+    function Base(){
+        protectedSpace[objId] = {};
+        this.objId = objId;
+        // this._protected = function(){ return protectedSpace[objId]; };
+        this.destroy = function(){ delete protectedSpace[this.objId]; };
+        objId++;
+    };
 
     if(!Object.create){
         Object.create = function createObject(proto) {
@@ -27,7 +22,7 @@ define(function(require){
     }
 
     function create(classFunction){
-        return extend(base, classFunction);
+        return extend(Base, classFunction);
     }
 
     function _polymorph(childFunction, parentFunction) {
@@ -40,11 +35,21 @@ define(function(require){
         };
     }
 
+    function rename(classFunction, newClassName){
+        var f = (new Function("return function(classX) { return function " + newClassName + "() { return classX(this, arguments) }; };")());
+        return f(Function.apply.bind(classFunction));
+    }
+
+    function _protected(obj){
+        return protectedSpace[obj.objId];
+    }
+
     function extend(classBase, classFunction){
         function classX(option){
             this._super = {};
             classBase.call(this._super, option);
             this._protected = _protected(this._super);
+            if(option.hasOwnProperty("debug") && option.debug) debug = true;
 
             for(var key in this._protected){
                 if(!this.hasOwnProperty(key)){
@@ -56,22 +61,24 @@ define(function(require){
                 if(!this.hasOwnProperty(key)){
                     this[key] = this._super[key];
                 }
-                if(key[0] == "$") $protected[this.objId][key] = this._super[key];
+                if(key[0] === "$" || key[0] === "_") protectedSpace[this.objId][key] = this._super[key];
             }
 
             classFunction.call(this, option);
 
             for(var key in this){
-                if(key[0] == "$") $protected[this.objId][key] = this[key];
+                if(this.hasOwnProperty(key) && (key[0] === "$" || key[0] === "_")) protectedSpace[this.objId][key] = this[key];
             }
 
             //prevent accessing protected variables from outside
             delete this._protected;
+            var _super = this._super;
             for(var key in this){
-                if(key[0] == "$"){
+                if(this.hasOwnProperty(key)  && (key[0] === "$" || key[0] === "_")){
                     delete this[key];
                 }
             }
+            this._super = _super;
 
             return this;
         }
@@ -88,25 +95,16 @@ define(function(require){
         return classX;
     }
 
-    function rename(classFunction, newClassName){
-        var f = (new Function("return function(classX) { return function " + newClassName + "() { return classX(this, arguments) }; };")());
-        return f(Function.apply.bind(classFunction));
-    }
-
-    function _protected(obj){
-        return $protected[obj.objId];
-    }
-
     var NewClass = {
         create: create,
         extend: extend,
-        rename: rename
+        rename: rename,
+        debug: false,
     };
 
-    if(debug){
-        NewClass._protectedSpace = $protected;
+    if(NewClass.debug){
+        NewClass._protectedSpace = protectedSpace;
     }
 
     return NewClass;
-
 });

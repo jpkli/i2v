@@ -143,8 +143,12 @@ function Arrays() {
         return {
             max: _reduce(array, "max"),
             min: _reduce(array, "min"),
-            avg: this.avg(array)
+            avg: that.avg(array)
         };
+    };
+
+    this.domain = function(array){
+        return [_reduce(array, "min"), _reduce(array, "max")];
     };
 
     this.histogram = function(array, bins, _max, _min) {

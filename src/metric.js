@@ -11,6 +11,7 @@ define(function(require){
     return function Metric(arg) {
         var metric =  map(),
             option = arg || {},
+            align = option.align || 'center',
             scale = option.scale || 'linear',
             domain = option.domain || [0,1],
             margin = option.margin || 0,
@@ -54,15 +55,10 @@ define(function(require){
 
         metric.value = function(v) {
             if(scale == "linear") {
-                // if(v < domain[0])
-                //     return range[0];
-                // else if(v > domain[1])
-                //     return range[1];
-                // else
                 return range[0] + (v - domain[0]) / (domain[1] - domain[0]) * (range[1] - range[0]);
             } else if(scale == "ordinal" || scale == "categorical") {
-                var res = range[0] + (domain.indexOf(v)+1) / domain.length * (range[1] - range[0]);
-
+                var offset = (align == 'center') ? 0.5 : 1.0,
+                    res = range[0] + (domain.indexOf(v)+offset) / domain.length * (range[1] - range[0]);
                 return res;
             }
         };
@@ -129,6 +125,15 @@ define(function(require){
         metric.rangeLength = function() {
             return Math.abs(range[1] - range[0]);
         };
+
+        metric.invert = function(r) {
+            if(scale == "linear") {
+                return domain[0] + (r - range[0]) / (range[1] - range[0]) * (domain[1] - domain[0]);
+            } else if(scale == "ordinal" || scale == "categorical") {
+
+                return r;
+            }
+        }
 
         return metric;
     };

@@ -2,23 +2,18 @@
 define(function(require){
     "use strict";
     var Metric = require('../metric') || i2v.Metric;
-    if (typeof(d3) !== 'function') {
-        var d3 = require('d3');
-        var d3s = d3.scale;
-    }
+    // if (typeof(d3) !== 'function') {
+    //     var d3 = require('d3');
+    //     var d3s = d3.scale;
+    // }
 
-    return function(arg) {
+    return function axis(arg) {
         var option      = arg || {},
             svg         = option.container || option.parent,
             // margin = option.margin || {left: 0, right: 0, top: 0, bottom: 0},
             dim         = option.dim || "x",
             labelPos    = option.labelPos || option.labelPosition || {x: 0, y: 0},
             labelAngel  = option.labelAngel || 0,
-            ticks       = option.ticks || 5,
-            tickLength  = option.tickLength || 6,
-            tickPosition = option.tickPosition || 0,
-            tickInterval= option.tickInterval || "auto",
-            tickFormat  = option.tickFormat || null,
             color       = option.color || "#222222",
             position    = option.position || 0,
             align       = option.align || "",
@@ -28,10 +23,16 @@ define(function(require){
             domain      = option.domain || [0,1],
             width       = option.width || svg.innerWidth(),
             height      = option.height || svg.innerHeight(),
-            padding     = option.paddig || svg.padding(),
+            padding     = option.padding || svg.padding(),
             range       = option.range || (dim == "x") ? [0, width] : [height, 0],
             // padding     = {left: 0, right: 0, top: 0, bottom: 0},
             styles      = {stroke: color, 'stroke-width': 0.5},
+            ticks       = option.ticks,
+            tickLength  = option.tickLength || 6,
+            tickPosition = option.tickPosition || 0,
+            tickInterval= option.tickInterval || "auto",
+            tickAlign = option.tickAlign || "center",
+            tickFormat  = option.tickFormat || null,
             grid        = option.grid,
             format      = option.format || function(_){return _;},
             autoHide    = option.autoHide || false,
@@ -46,6 +47,9 @@ define(function(require){
             range = (dim == "x") ? [0, width] : [0,height];
         }
 
+        if(typeof(ticks) != "number") {
+            ticks = (dim == "x") ? Math.ceil(width/60) : Math.ceil(height/60);
+        }
 
         function getTickInterval(){
             var vDomain = Math.abs(domain[1] - domain[0]),
@@ -65,9 +69,20 @@ define(function(require){
 
 
         if (scale == "categorical" || scale == "ordinal") {
-            domainIntervals = function() { return domain };
+            domainIntervals = function() {
+                var len = domain.length,
+                    step = Math.ceil(len / ticks),
+                    intervals = [],
+                    i;
+                for(i = 0; i < len; i += step) {
+                    intervals.push(domain[i])
+                }
+                if(intervals[i] != domain[len-1]) intervals.push(domain[len-1]);
+
+                return intervals;
+            };
         } else {
-            var intv
+            var intv;
 
             if(tickInterval == "auto"){
                 intv = getTickInterval();
@@ -80,7 +95,6 @@ define(function(require){
                     intv = Math.abs(domain[1] - domain[0]) / ticks;
                 }
             }
-
 
             domainIntervals = function() {
                 var di = [];
@@ -105,7 +119,7 @@ define(function(require){
                 metric = d3s.pow().exponent(exponent).domain(domain).range(range);
                 metric.value = metric;
             } else {
-                metric = new Metric().scale(scale).domain(domain).range(range);
+                metric = new Metric({align: tickAlign}).scale(scale).domain(domain).range(range);
                 // metric = d3s.linear().domain(domain).range(range);
                 // metric.value = metric;
             }
@@ -139,7 +153,6 @@ define(function(require){
                 .Attr({x1: X[0], x2: X[1], y1: Y[0], y2: Y[1], class: "axis"})
                 .Style(styles);
 
-            // var di = (tickInterval == "auto") ? metric.domainIntervals(ticks) : metric.domainIntervals_fit(ticks);
             var di = domainIntervals();
 
             for(var i = 0; i < di.length; i++) {
@@ -162,8 +175,8 @@ define(function(require){
                         x: x2 + labelPos.x,
                         y: y2 - labelPos.y,
                         // class: "labels",
-                        "font-size": ".9em",
-                        "text-anchor": "middle"
+                        "font-size": ".95em",
+                        "text-anchor": (dim == 'x') ? "middle" : "end"
                     });
                 if(labelAngel) tickLabel.attr("transform", "rotate(" + [labelAngel, (x2 + labelPos.x), (y2 - labelPos.y)].join(",")+")");
 
@@ -181,7 +194,7 @@ define(function(require){
                     } else {
                         gy1 = gy2 = metric.value(di[i]);
                         gx1 = 0;
-                        gx2 = Math.max(range[0], range[1]);
+                        gx2 = width;
                     }
                     axis.append("line", {x1: gx1, x2: gx2, y1: gy1, y2: gy2, class: "grid-lines"}, styles);
                 }

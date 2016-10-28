@@ -1,120 +1,147 @@
-var Svg = require('./svg.js');
+define(function(require){
+    var Svg = require('./svg.js');
 
-module.exports = Svg.extend(function Selector(arg){
-    "use restrict";
+    return function Selector(arg){
+        "use restrict";
+        var option = arg || {},
+            container = option.container || this.svg[0],
+            width = option.width || this.$width,
+            height = option.height || this.$height,
+            x = function() {},
+            y = function() {},
+            selectX = false,
+            selectY = false,
+            brush = option.brush || function() {},
+            brushstart = option.brushstart || function() {},
+            brushend = option.brushend || function() {};
 
-    var $this = this._protected,
-		option = arg || {},
-        width = arg.width || $this.width,
-        height = arg.height || $this.height,
-        container = arg.container ||  $this.svg.main,
-        offset = {x: 50, y: 50};
+        if(typeof(option.x) === "function") {
+            x = option.x;
+            selectX = true;
+        }
+        if(typeof(option.y) === "function") {
+            y = option.y;
+            selectY = true;
+        }
 
+        this.x = function(xMap) {
+            if(typeof xMap === "function") x = xMap;
+        }
 
-    var base = container.append("g")
+        var base = container.append("g")
                 .attr("class", "selector");
 
-    base.append("rect")
-        .attr("class", "selector-base")
-        .attr("x", 0)
-        .attr("y", 0)
-        .attr("width", width)
-        .attr("height", height)
-        .attr("fill-opacity", 0)
-        .attr("stroke", "none")
-        .css("cursor", "crosshair");
+        base.append("rect")
+            .attr("x", 0)
+            .attr("y", 0)
+            .attr("width", width)
+            .attr("height", height)
+            .attr("fill-opacity", 0)
+            .attr("stroke", "none")
+            .css("cursor", "crosshair");
 
-    var selector = base.append("rect")
-        .attr("class", "selector-controller")
-        .attr("x", 0)
-        .attr("y", 0)
-        .attr("width", 0)
-        .attr("height", 0)
-        .attr("fill-opacity", 0.2)
-        .css("fill", "#aaa")
-        .css("stroke", "#FFFFFF")
-        .css("cursor", "move");
+        var selector = base.append("rect")
+            .attr("x", 0)
+            .attr("y", 0)
+            .attr("width", 0)
+            .attr("height", 0)
+            .attr("fill-opacity", 0.4)
+            .css("fill", "#555")
+            .css("stroke", "#FFFFFF")
+            .css("cursor", "move");
 
-    var sx, sy, dx, dy, intStart = false, drag = false, tx=0, ty=0;
+        var sx, sy,
+            dx, dy,
+            bx, by,
+            selection = {},
+            intStart = false,
+            drag = false;
 
-    base.addEventListener("mousedown", function(evt){
-        evt.preventDefault();
+        base.addEventListener("mousedown", function(evt){
+            evt.preventDefault();
+            intStart = true;
+            sx = evt.clientX;
+            sy = evt.clientY;
 
-        intStart = true;
-        sx = evt.clientX;
-        sy = evt.clientY;
+            var sp = selector.getBoundingClientRect();
+            var box = base.getBoundingClientRect();
 
-        var sp = selector.getBoundingClientRect();
-
-        function isSelect(x, y) {
-
-            return ;
-        }
-
-        if(sx>sp.left && sy>sp.top && sx<sp.left+sp.width && sy<sp.top+sp.height) drag = true;
-
-        if(!drag){
-            tx=0;
-            ty=0;
-            selector.attr("x", sx-offset.x)
-                .attr("y", sy-offset.y)
-                .attr("width", 0)
-                .attr("height", 0).attr("transform", "translate(0,0)");
-        }
-
-        ondrag = function(evt){
-            if(intStart){
-                dx = evt.clientX - sx;
-                dy = evt.clientY - sy;
-
-                if(drag){
-                    selector.attr("transform", "translate(" + (dx + tx) + " , " + (dy + ty) + ")");
-                    // selector.attr("x", sx + dx - offset.x ).attr("y", sy + dy - offset.y );
-
-                } else {
-
-                    selector.attr("width", Math.abs(dx)).attr("height", Math.abs(dy));
-
-                    // if(dy<0 && dx>=0) selector.attr("transform", "translate(0," + dy + ")");
-                    // if(dx<0 && dy>=0) selector.attr("transform", "translate(" + dx + " ,0)");
-                    // if(dx<0 && dy<0) selector.attr("transform", "translate(" + dx + " , " + dy + ")");
-
-                    if(dy<0 && dx>=0) selector.attr("y", sy+dy-offset.y );
-                    if(dx<0 && dy>=0) selector.attr("x", sx+dx-offset.x );
-                    if(dx<0 && dy<0) selector.attr("x", sx+dx-offset.x ).attr("y", sy+dy-offset.y );
-
-                }
-
-                if(evt.clientX >= width ||
-                    evt.clientY >= height ||
-                    evt.clientX <= offset.x ||
-                    evt.clientY <= offset.y)
-
-                    base.dispatchEvent(new Event("mouseup"));
+            if(sx>sp.left && sy>sp.top && sx<sp.left+sp.width && sy<sp.top+sp.height) {
+                drag = true;
+                bx = sp.left;
+                by = sp.top;
             }
 
-        };
+            brushstart.call(this);
 
-
-        base.addEventListener("mousemove", ondrag, false);
-
-        base.addEventListener("mouseup", function(evt){
-            if(intStart){
-                intStart = false;
-                if(drag){
-                    // selector.attr("x", sp.left + dx - offset.x)
-                    //     .attr("y", sp.top + dy - offset.y).attr("transform", "translate(0,0)");
-                    tx += dx;
-                    ty += dy;
-                    drag = false;
-                }
-
+            if(!drag){
+                x0 = selectX ? sx - box.left : 0;
+                y0 = selectY ? sy - box.top: 0;
+                selector.attr("x", x0)
+                    .attr("y", y0)
+                    .attr("width", 0);
             }
-            base.removeEventListener("mousemove", ondrag, false);
+
+            ondrag = function(evt){
+                if(intStart){
+                    dx = evt.clientX - sx;
+                    dy = evt.clientY - sy;
+                    var selectorBox = selector.getBoundingClientRect();
+
+                    if(drag){
+                        var x0, y0, nw, nh;
+                        var nx = bx + dx-box.left,
+                            ny = by + dy-box.top;
+
+                        if(bx+dx < box.left) nx = 0;
+
+                        if(bx+dx+selectorBox.width > box.right) nx = width - selectorBox.width ;
+                        if(by+dy < box.top) ny = 0;
+                        if(by+dy+selectorBox.height > box.bottom) ny = height - selectorBox.height;
+
+                        selector.attr("x", nx).attr("y", ny);
+
+                    } else {
+                        if(evt.clientX < box.left) dx = box.left - sx;
+                        if(evt.clientX > box.right) dx = box.right - sx;
+                        if(evt.clientY > box.bottom) dy = box.bottom - sy;
+                        if(evt.clientY < box.top) dy = box.top - sy;
+
+                        x0 = selectX ? sx+dx - box.left: 0;
+                        y0 = selectY ? sy+dy - box.top : 0;
+                        nw = selectX ? Math.abs(dx) : width;
+                        nh = selectY ? Math.abs(dy) : height;
+
+                        selector.attr("width", nw).attr("height", nh);
+                        if(dx<0 && dy>=0) selector.attr("x", x0);
+                        if(dy<0 && dx>=0) selector.attr("y", y0);
+                        if(dx<0 && dy<0) selector.attr("x", x0).attr("y", y0);
+                    }
+                    if(selectX)
+                        selection.x = [ x.invert(selectorBox.left - box.left), x.invert(selectorBox.right - box.left)];
+
+                    if(selectY)
+                        selection.y = [y.invert(selectorBox.top - box.top), y.invert(selectorBox.bottom - box.top)];
+
+
+                    brush.call(this, selection);
+                    // console.log(selection.x, selection.y);
+                }
+            };
+
+            window.addEventListener("mousemove", ondrag, false);
+            window.addEventListener("mouseup", function(evt){
+                if(intStart){
+                    intStart = false;
+                    if(drag){
+                        drag = false;
+                    }
+                    brushend.call(this, selection);
+                }
+                window.removeEventListener("mousemove", ondrag, false);
+            });
         });
 
-    });
-
-
+    };
 
 });
