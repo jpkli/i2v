@@ -61,22 +61,23 @@ define(function(require){
                 if(!this.hasOwnProperty(key)){
                     this[key] = this._super[key];
                 }
-                if(key[0] === "$" || key[0] === "_") protectedSpace[this.objId][key] = this._super[key];
+                if(key[0] === "$" || key[0] === "_")
+                    protectedSpace[this.objId][key] = this._super[key];
             }
 
             classFunction.call(this, option);
 
             for(var key in this){
-                if(this.hasOwnProperty(key) && (key[0] === "$" || key[0] === "_")) protectedSpace[this.objId][key] = this[key];
+                if(this.hasOwnProperty(key) && (key[0] === "$" || key[0] === "_"))
+                    protectedSpace[this.objId][key] = this[key];
             }
 
             //prevent accessing protected variables from outside
             delete this._protected;
             var _super = this._super;
             for(var key in this){
-                if(this.hasOwnProperty(key)  && (key[0] === "$" || key[0] === "_")){
+                if(this.hasOwnProperty(key)  && (key[0] === "$" || key[0] === "_"))
                     delete this[key];
-                }
             }
             this._super = _super;
 

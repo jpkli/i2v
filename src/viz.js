@@ -2,7 +2,7 @@ if (typeof(define) !== 'function') var define = require('amdefine')(module);
 
 define(function(require){
     var Class = require("./class"),
-        Svg = require('./svg/svg'),
+        Svg = require('./svg-proto'),
         stats = require('p4/dataopt/stats'),
         scale = require('./scale');
 
@@ -53,7 +53,13 @@ define(function(require){
                 height = arg.height || this.$height,
                 padding = arg.padding || this.$padding;
 
-            return Svg.call(this, {
+            // return Svg.call(this, {
+            //     width: width,
+            //     height: height,
+            //     padding: padding,
+            // });
+
+            return new Svg({
                 width: width,
                 height: height,
                 padding: padding,
@@ -80,18 +86,20 @@ define(function(require){
             return viz;
         };
 
-        this.viz = function() {
+
+        this.addLayer = function(layer) {
+            if(layer.tagName == 'canvas') viz.canvas.push(layer);
+            else viz.svg.push(layer);
+        }
+
+        this.viz = function(layer) {
+            if(typeof layer !== 'undefined') this.addLayer(layer);
             viz.canvas.forEach(function(layer){
                 viz.div.appendChild(layer);
             });
             viz.svg.forEach(function(g){
-                viz.div.appendChild(g);
+                viz.div.appendChild(g.svg);
             });
-        }
-
-        this.addLayer = function(layer) {
-            if(layer.tagName == "canvas") viz.canvas.push(layer);
-            else viz.svg.push(layer);
         }
 
         this.render = this.viz;

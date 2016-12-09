@@ -1,7 +1,7 @@
 define(function(){
     return function WebGL(option){
     "use strict;"
-    var webgl = {},
+    var webgl = (this instanceof WebGL) ? this : {},
         arg = option || {},
         containerId = arg.container || "body";
         canvas = arg.canvas || document.createElement("canvas"),
@@ -53,9 +53,9 @@ define(function(){
         // "EXT_blend_minmax"
     ]);
 
-    // var blendExt = ctx.getExtension("EXT_blend_minmax");
-    // ctx.MAX_EXT = blendExt.MAX_EXT;
-    // ctx.MIN_EXT = blendExt.MIN_EXT;
+    var blendExt = ctx.getExtension("EXT_blend_minmax");
+    ctx.MAX_EXT = blendExt.MAX_EXT;
+    ctx.MIN_EXT = blendExt.MIN_EXT;
     // var ext = ctx.getExtension("ANGLE_instanced_arrays");
     // ctx.vertexAttribDivisorANGLE = ext.vertexAttribDivisorANGLE;
     // ctx.drawArraysInstancedANGLE = ext.drawArraysInstancedANGLE;

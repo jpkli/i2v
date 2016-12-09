@@ -1,20 +1,14 @@
-
 define(function(require){
-    "use strict";
-    var Metric = require('../metric') || i2v.Metric;
-    // if (typeof(d3) !== 'function') {
-    //     var d3 = require('d3');
-    //     var d3s = d3.scale;
-    // }
+    var Scale = require('../scale');
 
     return function axis(arg) {
+        'use strict';
         var option      = arg || {},
             svg         = option.container || option.parent,
-            // margin = option.margin || {left: 0, right: 0, top: 0, bottom: 0},
             dim         = option.dim || "x",
             labelPos    = option.labelPos || option.labelPosition || {x: 0, y: 0},
             labelAngel  = option.labelAngel || 0,
-            color       = option.color || "#222222",
+            color       = option.color || "#000",
             position    = option.position || 0,
             align       = option.align || "",
             scale       = option.scale || "linear",
@@ -25,7 +19,6 @@ define(function(require){
             height      = option.height || svg.innerHeight(),
             padding     = option.padding || svg.padding(),
             range       = option.range || (dim == "x") ? [0, width] : [height, 0],
-            // padding     = {left: 0, right: 0, top: 0, bottom: 0},
             styles      = {stroke: color, 'stroke-width': 0.5},
             ticks       = option.ticks,
             tickLength  = option.tickLength || 6,
@@ -40,9 +33,6 @@ define(function(require){
             X = [],
             Y = [];
 
-        // width -= padding.left + padding.right;
-        // height -= padding.top + padding.bottom;
-
         if (range === null){
             range = (dim == "x") ? [0, width] : [0,height];
         }
@@ -50,6 +40,7 @@ define(function(require){
         if(typeof(ticks) != "number") {
             ticks = (dim == "x") ? Math.ceil(width/60) : Math.ceil(height/60);
         }
+
 
         function getTickInterval(){
             var vDomain = Math.abs(domain[1] - domain[0]),
@@ -77,7 +68,7 @@ define(function(require){
                 for(i = 0; i < len; i += step) {
                     intervals.push(domain[i])
                 }
-                if(intervals[i] != domain[len-1]) intervals.push(domain[len-1]);
+                // if(intervals[i] != domain[len-1]) intervals.push(domain[len-1]);
 
                 return intervals;
             };
@@ -86,13 +77,15 @@ define(function(require){
 
             if(tickInterval == "auto"){
                 intv = getTickInterval();
-                domain[0] = intv * Math.floor(domain[0]/intv);
-                domain[1] = intv * Math.ceil(domain[1]/intv);
+
             } else {
                 if(typeof(tickInterval) == "number") {
                     intv = tickInterval;
                 } else {
-                    intv = Math.abs(domain[1] - domain[0]) / ticks;
+                    // intv = Math.abs(domain[1] - domain[0]) / ticks;
+                    intv = getTickInterval();
+                    domain[0] = intv * Math.floor(domain[0]/intv);
+                    domain[1] = intv * Math.ceil(domain[1]/intv);
                 }
             }
 
@@ -108,21 +101,25 @@ define(function(require){
                         di.push(i);
                 }
 
-
                 if(di[di.length-1]!=domain[1] && !isNaN(domain[1])) di.push(domain[1]);
                 return di;
             }
         }
 
         if (metric === null) {
+
+            var scaleOptions = {
+                align: tickAlign,
+                type: scale,
+                domain: domain,
+                range: range
+            };
+
             if(scale == "power") {
-                metric = d3s.pow().exponent(exponent).domain(domain).range(range);
-                metric.value = metric;
-            } else {
-                metric = new Metric({align: tickAlign}).scale(scale).domain(domain).range(range);
-                // metric = d3s.linear().domain(domain).range(range);
-                // metric.value = metric;
+                scaleOptions.exponent = exponent;
             }
+
+            metric = new Scale(scaleOptions)
         } else {
             domain = metric.domain();
         }
@@ -150,7 +147,7 @@ define(function(require){
         metric.show = metric.axis = function() {
             axis.append("g")
                 .append("line")
-                .Attr({x1: X[0], x2: X[1], y1: Y[0], y2: Y[1], class: "axis"})
+                .Attr({x1: X[0], x2: X[1], y1: Y[0], y2: Y[1]})
                 .Style(styles);
 
             var di = domainIntervals();
@@ -158,41 +155,52 @@ define(function(require){
             for(var i = 0; i < di.length; i++) {
                 var x1,x2,y1,y2;
                 if(dim == 'x'){
-                    x1 = x2 = metric.value(di[i]);
-                    y1 = position + tickPosition + tickLength / 2;
+                    x1 = x2 = metric(di[i]);
+                    y1 = position + tickPosition + tickLength;
                     y2 = y1 - tickLength;
                 } else {
-                    y1 = y2 = metric.value(di[i]);
-                    x1 = position + tickPosition + tickLength / 2;
+                    if(scale == "categorical" || scale == "ordinal")
+                        y1 = y2 = height - metric(di[i]);
+                    else
+                        y1 = y2 = metric(di[i]);
+                    x1 = position + tickPosition ;
                     x2 = x1 - tickLength;
                 }
 
                 var svgTicks = axis.append("g");
-                svgTicks.append("line", {x1: x1, x2: x2, y1: y1, y2: y2, class: "tick"}, styles);
+                svgTicks.append("line", {
+                    x1: x1,
+                    x2: x2,
+                    y1: y1,
+                    y2: y2,
+                }, styles);
+
+                var tickLabelAlign = "end";
+                if(align=="right") tickLabelAlign = "begin";
+                if (dim == 'x') tickLabelAlign = "middle";
 
                 var tickLabel = svgTicks.append("text")
                     .Attr({
                         x: x2 + labelPos.x,
                         y: y2 - labelPos.y,
                         // class: "labels",
-                        "font-size": ".95em",
-                        "text-anchor": (dim == 'x') ? "middle" : "end"
+                        class: "i2v-axis-label",
+                        textAnchor: tickLabelAlign
                     });
                 if(labelAngel) tickLabel.attr("transform", "rotate(" + [labelAngel, (x2 + labelPos.x), (y2 - labelPos.y)].join(",")+")");
 
                 var labelText = (typeof(tickFormat) == "function") ? format(tickFormat(di[i])) : format(di[i]) ;
-                tickLabel.appendChild( document.createTextNode(labelText) );
-
-                styles["stroke-opacity"] = 0.7;
+                // tickLabel.appendChild( document.createTextNode(labelText) );
+                tickLabel.text(labelText);
 
                 if(grid) {
                     var gx1, gx2, gy1, gy2;
                     if(dim == 'x'){
-                        gx1 = gx2 = metric.value(di[i]);
+                        gx1 = gx2 = metric(di[i]);
                         gy1 = 0;
                         gy2 =height;
                     } else {
-                        gy1 = gy2 = metric.value(di[i]);
+                        gy1 = gy2 = metric(di[i]);
                         gx1 = 0;
                         gx2 = width;
                     }

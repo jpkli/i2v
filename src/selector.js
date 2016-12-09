@@ -1,16 +1,16 @@
 define(function(require){
-    var Svg = require('./svg.js');
-
     return function Selector(arg){
         "use restrict";
         var option = arg || {},
             container = option.container || this.svg[0],
             width = option.width || this.$width,
             height = option.height || this.$height,
-            x = function() {},
-            y = function() {},
-            selectX = false,
-            selectY = false,
+            x = function(d) {return d},
+            y = function(d) {return d},
+            selectX = option.x || false,
+            selectY = option.y || false,
+            border = option.border || "#FFF",
+            color = option.color || "#AAA",
             brush = option.brush || function() {},
             brushstart = option.brushstart || function() {},
             brushend = option.brushend || function() {};
@@ -19,6 +19,7 @@ define(function(require){
             x = option.x;
             selectX = true;
         }
+
         if(typeof(option.y) === "function") {
             y = option.y;
             selectY = true;
@@ -46,8 +47,8 @@ define(function(require){
             .attr("width", 0)
             .attr("height", 0)
             .attr("fill-opacity", 0.4)
-            .css("fill", "#555")
-            .css("stroke", "#FFFFFF")
+            .css("fill", color)
+            .css("stroke", border)
             .css("cursor", "move");
 
         var sx, sy,
@@ -57,14 +58,14 @@ define(function(require){
             intStart = false,
             drag = false;
 
-        base.addEventListener("mousedown", function(evt){
+        base.svg.addEventListener("mousedown", function(evt){
             evt.preventDefault();
             intStart = true;
             sx = evt.clientX;
             sy = evt.clientY;
 
-            var sp = selector.getBoundingClientRect();
-            var box = base.getBoundingClientRect();
+            var sp = selector.svg.getBoundingClientRect();
+            var box = base.svg.getBoundingClientRect();
 
             if(sx>sp.left && sy>sp.top && sx<sp.left+sp.width && sy<sp.top+sp.height) {
                 drag = true;
@@ -86,7 +87,7 @@ define(function(require){
                 if(intStart){
                     dx = evt.clientX - sx;
                     dy = evt.clientY - sy;
-                    var selectorBox = selector.getBoundingClientRect();
+                    var selectorBox = selector.svg.getBoundingClientRect();
 
                     if(drag){
                         var x0, y0, nw, nh;
@@ -118,11 +119,10 @@ define(function(require){
                         if(dx<0 && dy<0) selector.attr("x", x0).attr("y", y0);
                     }
                     if(selectX)
-                        selection.x = [ x.invert(selectorBox.left - box.left), x.invert(selectorBox.right - box.left)];
+                        selection.x = [ x(selectorBox.left - box.left), x(selectorBox.right - box.left)];
 
                     if(selectY)
-                        selection.y = [y.invert(selectorBox.top - box.top), y.invert(selectorBox.bottom - box.top)];
-
+                        selection.y = [y(selectorBox.top - box.top), y(selectorBox.bottom - box.top)];
 
                     brush.call(this, selection);
                     // console.log(selection.x, selection.y);

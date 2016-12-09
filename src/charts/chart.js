@@ -2,27 +2,28 @@ if (typeof(define) !== 'function') var define = require('amdefine')(module);
 
 define(function(require){
     "use strict";
-    var svg = require("../svg/svg"),
+    var Viz = require('../viz'),
         Axis = require('../svg/axis'),
-        Viz = require('../viz'),
-        stats = require('p4/dataopt/stats'),
         Selector = require('../selector'),
-        scale = require('../metric'),
-        printformat = require('../format');
+        stats = require('p4/dataopt/stats'),
+        scale = require('../metric');
 
-    return Viz.extend(function(option){
-        var barWidth = this.$width / (this.data.length),
-            barChart = this.$svg(),
-            data = this.data,
-            vmap = option.vmap,
-            color = option.color || "steelblue",
-            domain = option.domain,
+    return Viz.extend(function Chart(option){
+        var chart = (this instanceof Viz) ? this : {};
+        chart._substrate = this.$svg();
+        chart._vmap = option.vmap;
+        chart._color = option.color || "steelblue";
+        var domain = option.domain,
             scales = option.scales,
-            format = option.format || printformat(".3s"),
             onclick = option.onclick || function(d) {console.log(d);},
             bars = barChart.append("g");
 
         domain = stats.domains(this.data, Object.keys(vmap).map(function(vk) {return vmap[vk];}));
+
+
+        chart.highlight = function() {
+
+        };
 
         var brush = {
             brushstart: function(){},
@@ -44,10 +45,9 @@ define(function(require){
         var x = Axis({
             container: barChart,
             dim: "x",
-            domain: this.data.map(function(d) { return d[vmap.x];}),
-            scale:  "ordinal",
+            domain: [0, this.data.length-1],
+            scale:  "linear",
             align: "bottom",
-            ticks: 10,
             labelPos: {x: 0, y: -20},
             // format: d3.format(".3s")
         });
@@ -58,8 +58,8 @@ define(function(require){
             domain: [0, domain[vmap.size][1]],
             align: "left",
             ticks: 5,
-            labelPos: {x: -2, y: -4},
-            format: format,
+            labelPos: {x: -20, y: -4},
+            format: d3.format(".3s"),
             // grid: true
         });
 
@@ -74,44 +74,26 @@ define(function(require){
             range: [0, that.$height]
         });
 
-        var columns = [], selected = [], selectedData = [];
-
-        this.highlight = function(selected) {
-            columns.forEach(function(c){
-                c.attr("fill", color);
-            });
-            selected.forEach(function(si){
-                columns[si].attr("fill", "orange");
-            });
-        }
+        var columns = [];
 
         this.data.forEach(function(d, i){
             var bar = bars.append("rect")
                 .Attr({
-                    x: x(d[vmap.x]) - barWidth*0.4,
+                    x: (i + 0.05) * barWidth,
                     y: y(d[vmap.size]),
-                    width: barWidth * 0.8,
+                    width: barWidth * 0.9,
                     height: that.$height - y(d[vmap.size]),
                     fill: colorScale(d[vmap.color])
                 });
 
-            // bar.svg.onclick = function() {
-            //     console.log(that.data[i].pid);
-            // }
-
             columns.push(bar);
 
-            bar.svg.onclick = function(evt) {
-                if(evt.shiftKey) {
-                    selected.push(i);
-                    selectedData.push(data[i]);
-                } else {
-                    selected = [i];
-                    selectedData = [data[i]];
-                }
-                that.highlight(selected);
-                // bar.svg.attr("fill", "#A00");
-                onclick(selectedData);
+            bar.onclick = function() {
+                columns.forEach(function(c){
+                    c.attr("fill", color);
+                });
+                this.attr("fill", "#A00");
+                onclick(i);
             }
 
         });
@@ -129,44 +111,27 @@ define(function(require){
 
         var legend = barChart.append("g");
 
-        if(option.title) {
-            legend.append("g")
-              .append("text")
-                .attr("class", "i2v-chart-title")
-                .attr("y", this.$padding.top / 2 - 5)
-                .attr("x", this.$padding.left + this.$width/2 )
-                .attr("dy", "1em")
-                .css("text-anchor", "middle")
-
-                .text(option.title);
-        }
-
-        var titleX = option.titleX || vmap.x.split("_").join(" "),
-            titleY = option.titleY || vmap.size.split("_").join(" ");
-
         legend.append("g")
           .append("text")
-            .attr("class", "i2v-axis-title")
             .attr("transform", "rotate(-90)")
             .attr("y", 10)
             .attr("x", -this.$height/2 - this.$padding.top)
             .attr("dy", ".85em")
             .css("text-anchor", "middle")
-
+            .css("font-size", "16px")
             .css(" text-transform", "capitalize")
-            .text(titleY);
+            .text(vmap.size.split("_").join(" "));
 
         legend.append("g")
           .append("text")
-            .attr("class", "i2v-axis-title")
             // .attr("transform", "rotate(-90)")
             .attr("y", this.$height + this.$padding.bottom /2 + this.$padding.top )
             .attr("x", this.$width/2 + this.$padding.left)
             .attr("dy", ".85em")
             .css("text-anchor", "middle")
-
+            .css("font-size", "16px")
             .css(" text-transform", "capitalize")
-            .text(titleX);
+            .text(vmap.x.split("_").join(" "));
 
         this.svg.push(barChart);
         this.viz();
