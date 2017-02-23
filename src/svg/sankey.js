@@ -35,7 +35,7 @@ define(function(require) {
                 nodes[0].forEach(function(row, ri) {
                     maxVals[ri] = ArrayOpt.max(nodes.map(function(n){
                         if(n[ri])
-                            return n[ri].count
+                            return n[ri].count;
                         else
                             return 0;
                     }));
@@ -47,7 +47,7 @@ define(function(require) {
     		for(var step = 0; step < stepTotal; step++){
     			nodePadding = paddingTotal / nodes[step].length;
 
-    			dx = step * width / (stepTotal+1);
+    			dx = step * width*0.88 / (stepTotal-1);
                 dy = 0;
                 var cValues = nodes[step].map(function(d){return d.count}),
                     totalSize = size;
@@ -219,13 +219,34 @@ define(function(require) {
                   .append("title")
                     .text(d.name + "\n" + format(d.count));
 
-                // node.append("text")
-                //     .attr("x", d.x)
-                //     .attr("y", d.y + d.dy / 2)
-                //     .attr("dy", ".35em")
-                //     .css("font-size", 10)
-                //     .text(d.name);
+                if(d.x == 0) {
+                    node.append("text")
+                        .attr("x", -3)
+                        .attr("y", d.y + d.dy / 2)
+                        .css("font-size", '1.2em')
+                        .css("text-anchor", 'end')
+                        .text(d.name);
+                } else if(d.x > width * 0.85) {
+                    node.append("text")
+                        .attr("x", d.x + nodeWidth + 3)
+                        .attr("y", d.y + d.dy / 2)
+                        .css("font-size", '1.2em')
+                        .css("text-anchor", 'begin')
+                        .text(d.name);
+                } else {
+                    node.append("text")
+                        .attr("x", d.x + nodeWidth / 2)
+                        .attr("y", d.y - 5 )
+                        .css("font-size", '.9em')
+                        .css("text-anchor", 'middle')
+                        .text(d.name);
+                }
+
+                // console.log(d.x, width);
             })
+
+            sankeyLinks.translate(nodeWidth*3, 15);
+            sankeyNodes.translate(nodeWidth*3, 15);
     	}
 
         if(showLegend) {
@@ -252,12 +273,13 @@ define(function(require) {
                         stroke: "#000",
                         fill:  color(n),
                     });
+
                 legend.append("text")
                     .attr("x", width - 50)
                     .attr("y", i * legendHeight + 15)
                     .css("fill", "#222")
                     .css("text-anchor", "end")
-                    .css("font-size", "1.2em")
+                    .css("font-size", "0.9em")
                     .text(n);
             });
         }

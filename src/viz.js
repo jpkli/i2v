@@ -13,8 +13,8 @@ define(function(require){
     }
 
     var defaultProperties = {
-        width: 400,
-        height: 300,
+        // width: 400,
+        // height: 300,
         padding: {left: 0, right: 0, top: 0, bottom: 0},
     }
 
@@ -24,9 +24,16 @@ define(function(require){
         /* Private */
         var viz = this,
             option = arg || {},
-            containerId = option.container || "body",
-            container,
+            container = option.container || document.body,
+            style = option.style || null,
             layers = [];
+
+        this.$width = container.clientWidth || 400;
+        this.$height = container.clientHeight || 300;
+
+        if(typeof container == 'string') container = document.getElementById(container);
+        assign(viz, defaultProperties);
+        assign(viz, option);
 
         /* Protected */
         // this.$width = option.width || 400;
@@ -36,13 +43,20 @@ define(function(require){
         // this.$size = function() {};
         // this.$color = function() {};
         // this.$alpha = function() {};
-        //
-        assign(viz, defaultProperties);
-        assign(viz, option);
+        this.vmap = option.vmap;
+        function getVisualMapping() {
+            if(viz.vmap) {
+                var domains = stats.domains(viz.data, Object.keys(viz.vmap));
 
-        viz.set = function(props) {
-            assign(viz, props);
+                if('color' in viz.vmap) {
+                    viz.$color = scale({
+                        domain: domains[viz.vmap.color],
+                        range: option.colors
+                    })
+                }
+            }
         }
+
 
         this.$width -= (this.$padding.left + this.$padding.right);
         this.$height -= (this.$padding.top + this.$padding.bottom);
@@ -68,10 +82,16 @@ define(function(require){
         /* Public */
         this.data = option.data || [];
         this.div = document.createElement("div");
+        if(style !== null) {
+            Object.keys(style).forEach(function(prop){
+                viz.div.style[prop] = style[prop];
+            })
+        }
         this.svg = [];
         this.canvas = [];
         this.init = function(){
-            container = (containerId == "body") ? document.body : document.getElementById(containerId);
+            getVisualMapping();
+            // container = (containerId == "body") ? document.body : document.getElementById(containerId);
 
             this.div.className = option.className || "i2v-viz";
             this.resize(
@@ -82,15 +102,22 @@ define(function(require){
             if(option.style) this.css(option.style);
 
             container.appendChild(this.div);
-
             return viz;
         };
 
+        this.set = function(props) {
+            assign(viz, props);
+        };
+
+        this.addProperty = function(obj, prop) {
+            assign(obj, prop);
+            return obj;
+        }
 
         this.addLayer = function(layer) {
             if(layer.tagName == 'canvas') viz.canvas.push(layer);
             else viz.svg.push(layer);
-        }
+        };
 
         this.viz = function(layer) {
             if(typeof layer !== 'undefined') this.addLayer(layer);
@@ -100,7 +127,7 @@ define(function(require){
             viz.svg.forEach(function(g){
                 viz.div.appendChild(g.svg);
             });
-        }
+        };
 
         this.render = this.viz;
 

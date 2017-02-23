@@ -101,7 +101,13 @@ define(function(require){
                         di.push(i);
                 }
 
-                if(di[di.length-1]!=domain[1] && !isNaN(domain[1])) di.push(domain[1]);
+                if(di[di.length-1]!=domain[1] && !isNaN(domain[1])){
+
+                    if((domain[1] - di[di.length-1]) < 0.6 * intv)
+                        di[di.length-1] = domain[1];
+                    else
+                        di.push(domain[1]);
+                }
                 return di;
             }
         }
@@ -185,6 +191,7 @@ define(function(require){
                         y: y2 - labelPos.y,
                         // class: "labels",
                         class: "i2v-axis-label",
+                        "font-size": "1.em",
                         textAnchor: tickLabelAlign
                     });
                 if(labelAngel) tickLabel.attr("transform", "rotate(" + [labelAngel, (x2 + labelPos.x), (y2 - labelPos.y)].join(",")+")");

@@ -177,4 +177,6 @@ function Arrays() {
     this.std = function(array) {
         return Math.sqrt(that.var(array));
     }
+
+
 }

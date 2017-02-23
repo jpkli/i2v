@@ -1,5 +1,5 @@
 define(function(require){
-    "use strict";
+    'use strict';
     var svg = require('../svg-proto'),
         area = require('../svg/area'),
         line = require('../svg/line'),
@@ -28,7 +28,6 @@ define(function(require){
             color = Colors(["steelblue", "orange", "purple"]),
             formatX = option.formatX || format('.3s'),
             label = option.label || {x: vmap.x, y: vmap.y};
-
 
         var brush = {
             brushstart: function(){},
@@ -70,13 +69,13 @@ define(function(require){
                 format: formatX
             });
 
-
+            console.log(domainY);
             y = Axis({
                 container: stackedAreaChart,
                 dim: "y",
-                domain: [1000, domainY[1]],
+                domain: domainY,
                 align: "left",
-                tickInterval: "fit",
+                // tickInterval: "fit",
                 // ticks: 4,
                 labelPos: {x: 0, y: -4},
                 format: format(".2s")
@@ -97,9 +96,9 @@ define(function(require){
                 } else {
                     series = {
                         x: data[vmap.x].map(function(d){ return x(d); }),
-                        y: data[vmap.y[vi]].map(function(d){ return y(d); })
-                    };
+                        y: data[vmap.y[vi]].map(function(d){ return y(d); }),
 
+                    };
                 }
                 results.push(series);
             });
@@ -144,26 +143,25 @@ define(function(require){
                 .css("font-size", "16px")
                 .text(label.x);
 
+            vmap.y.forEach(function(si,j){
+                var legendPos = sac.$width - 40,
+                    // legendWidth = legendPos / Object.keys(series).length;
+                    legendWidth = 180;
+                legend.append("rect")
+                    .attr("x", legendPos-15-j*legendWidth)
+                    .attr("y", 15)
+                    .attr("width", 10)
+                    .attr("height", 10)
+                    .css("fill", color(si));
+                    // .css("stroke-width", 3);
 
-                vmap.y.forEach(function(si,j){
-                    var legendPos = sac.$width - 40,
-                        // legendWidth = legendPos / Object.keys(series).length;
-                        legendWidth = 180;
-                    legend.append("rect")
-                        .attr("x", legendPos-15-j*legendWidth)
-                        .attr("y", 15)
-                        .attr("width", 10)
-                        .attr("height", 10)
-                        .css("fill", color(si));
-                        // .css("stroke-width", 3);
-
-                    legend.append("text")
-                        .attr("x", legendPos-j*legendWidth)
-                        .attr("y", 25)
-                        .css("fill", "#222")
-                        .css("font-size", "16px")
-                        .text(si.split("_").join(" "));
-                });
+                legend.append("text")
+                    .attr("x", legendPos-j*legendWidth)
+                    .attr("y", 25)
+                    .css("fill", "#222")
+                    .css("font-size", "16px")
+                    .text(si.split("_").join(" "));
+            });
 
             if(brush.x || brush.y){
                 brush.x = x.invert;

@@ -12,34 +12,59 @@ define(function(require){
 
     return Viz.extend(function ScatterPlot(option){
         var svg = this.$svg(),
-            chart = plot.append("g"),
+            chart = svg.append("g"),
             title = option.title;
 
         chart.translate(this.$padding.left, this.$padding.top);
 
-        var legend = plot.append("g");
+        var legend = chart.append("g");
 
-        legend.append("g")
-          .append("text")
-            .attr("transform", "rotate(-90)")
-            .attr("y", 10)
-            .attr("x", -this.$height/2 - this.$padding.top)
-            .attr("dy", ".85em")
-            .css("text-anchor", "middle")
-            .css("font-size", "16px")
-            .css(" text-transform", "capitalize")
-            .text(vmap.y.split("_").join(" "));
+        this.$showLabel = function(dim, pos, text) {
+            var label,
+                posX0 = this.$width/2 + this.$padding.left,
+                posY0 = -this.$height/2 - this.$padding.top,
+                presetPos = {
+                    x: {
+                        top    : [posX0, this.$padding.top/2],
+                        middle : [posX0, this.$padding.top + this.$height/2],
+                        bottom : [posX0, this.$height + this.$padding.bottom /2 + this.$padding.top]
 
-        legend.append("g")
-          .append("text")
-            // .attr("transform", "rotate(-90)")
-            .attr("y", this.$height + this.$padding.bottom /2 + this.$padding.top )
-            .attr("x", this.$width/2 + this.$padding.left)
-            .attr("dy", ".85em")
-            .css("text-anchor", "middle")
-            .css("font-size", "16px")
-            .css(" text-transform", "capitalize")
-            .text(vmap.x.split("_").join(" "));
+                    },
+                    y: {
+                        left   : [posY0, -this.$padding.left / 2],
+                        center : [posY0, this.$padding.left + this.$width/2],
+                        right  : [posY0, this.$width + this.$padding.left + this.$padding.right / 2]
+                    }
+                };
+
+            var labelPos = (typeof pos == 'string') ? presetPos[pos] : pos;
+
+            if(dim == 'x') {
+                label = (typeof text == 'undefined') ? vmap.x.split("_").join(" ");
+                legend.append("g")
+                  .append("text")
+                    .attr("x", labelPos[0])
+                    .attr("y", labelPos[1])
+                    .attr("dy", "1em")
+                    .css("text-anchor", "middle")
+                    .css("font-size", "1em")
+                    .css(" text-transform", "capitalize")
+                    .text(label);
+
+            } else {
+                label = (typeof text == 'undefined') ? vmap.y.split("_").join(" ");
+                legend.append("g")
+                  .append("text")
+                    .attr("transform", "rotate(-90)")
+                    .attr("x", labelPos[0])
+                    .attr("y", labelPos[1])
+                    .attr("dy", "1em")
+                    .css("text-anchor", "middle")
+                    .css("font-size", "1em")
+                    .css("text-transform", "capitalize")
+                    .text(label);
+            }
+        }
 
         if(option.title) {
             legend.append("g")

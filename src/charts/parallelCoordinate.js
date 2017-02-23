@@ -25,6 +25,8 @@ define(function(require){
             numDims = features.length,
             showAxis = option.axis || new Array(numDims).fill(1),
             selectors = plot.append("g"),
+            formats = option.formats || {},
+            axisLabels = option.labels || {},
             labels = svg.append("g");
 
         var fgl = new FlexGL({
@@ -42,9 +44,10 @@ define(function(require){
             filterDim = new Array(numDims).fill(0),
             filterRanges = new Array(numDims).fill([0,0]);
 
-        var alpha = 0.15;
+        var alpha = 0.150;
         fgl.uniform("coef", "vec2", [1/(numRows-1), 1/(numDims-1)])
             .uniform( "uColor", "vec4", Colors.rgba(color, alpha))
+            .uniform( "uHighlightColor", "vec4", Colors.rgba('yellow', alpha*2))
             .uniform("domains", "vec2", new Array(numDims*2).fill(0))
             .uniform("filterFlag", "int", 0)
             .uniform("mode", "float", 1)
@@ -54,6 +57,9 @@ define(function(require){
             .attribute("row", "float",  new Float32Array(seq(0, numRows-1)))
             .framebuffer("filter", "float", [numRows, 1])
             .varying("filterResult", "float")
+            .varying("highlightResult", "float")
+            .texture("highlightData", "float", new Float32Array(numRows), [numRows, 1])
+            .uniform("highlightFlag", "int", 0)
             .texture("data", "float", texData, [numRows, numDims]);
 
         var texData = this.data;
@@ -69,12 +75,15 @@ define(function(require){
                 position: i * axisDist,
                 dim: "y",
                 domain: domains[f],
+
                 tickInterval: "auto",
-                ticks: Math.ceil(self.$height / 50),
+                ticks: Math.ceil(self.$height / 100),
                 labelPos: {x: -5, y: -4},
-                // grid: 1,
                 format: format(".3s")
+                // grid: 1,
+
             };
+            if(formats.hasOwnProperty(f)) axisOption.format = formats[f];
             if(showAxis[i] == 0) axisOption.autoHide = true;
 
             yAxis[i] = axis(axisOption);
@@ -110,21 +119,26 @@ define(function(require){
                     }
                 })
 
+                var labelName = (axisLabels.hasOwnProperty(f)) ? axisLabels[f] : f.split("_").join(" ");
                 labels
                 .append("text")
                   .attr("y", 0)
                   .attr("x", self.$padding.left + i * axisDist)
                   .attr("dy", "1em")
                   .css("text-anchor", "end")
-                  .css("font-size", "1.em")
-                  .text(f.split("_").join(" "));
+                  .css("font-size", "1.25em")
+                  .text(labelName);
               }
         })
 
         plot.translate(this.$padding.left, this.$padding.top);
 
 
-        fgl.shader.vertex(function(coef, domains, dimension, row, data, filterFlag, filter, filterResult) {
+        fgl.shader.vertex(function(
+            coef, domains, dimension, row, data,
+            filterFlag, filter, filterResult,
+            highlightFlag, highlightData, highlightResult
+        ) {
             var x, y, r, d, value;
 
             $int(i);
@@ -137,6 +151,11 @@ define(function(require){
             filterResult = 1.0;
             if(filterFlag == 1)
                 filterResult = texture2D(filter, vec2(r, 0)).r;
+
+            highlightResult = -1.0;
+            if(highlightFlag == 1)
+                highlightResult = texture2D(highlightData, vec2(r, 0)).a;
+
 
             gl_Position = vec4(x, y, 0.0, 1.0);
         });
@@ -172,10 +191,16 @@ define(function(require){
         });
 
 
-        fgl.shader.fragment(function(uColor, filterResult, mode) {
+        fgl.shader.fragment(function(uColor, filterResult, mode, highlightResult, uHighlightColor) {
             if(filterResult == mode)
                 discard;
-            gl_FragColor = uColor;
+
+            if(highlightResult == 0.0) discard;
+
+            if(highlightResult == 1.0)
+                gl_FragColor = uHighlightColor;
+            else
+                gl_FragColor = uColor;
         });
 
         fgl.program("filter", "filter", "fsFilter");
@@ -184,8 +209,9 @@ define(function(require){
         fgl.uniform.domains = fgl.uniform.serialize(yAxis.map(function(d){return d.domain();}));
 
 
-        function render() {
+        function render(highlight) {
             var gl = fgl.program("parallelCoordinate");
+            gl.lineWidth(1);
             gl.ext.vertexAttribDivisorANGLE(fgl.attribute.dimension.location, 0);
             gl.ext.vertexAttribDivisorANGLE(fgl.attribute.row.location, 1);
             gl.viewport(0, 0, fgl.canvas.width, fgl.canvas.height);
@@ -195,14 +221,35 @@ define(function(require){
             gl.blendEquation( gl.FUNC_ADD );
             gl.blendFunc( gl.ONE, gl.ONE_MINUS_SRC_ALPHA );
 
+            //draw background lines
             fgl.uniform.mode = 1.0;
             fgl.uniform.uColor = [0.85, 0.85, 0.85, 0.95];
             gl.ext.drawArraysInstancedANGLE(gl.LINE_STRIP, 0, numDims, numRows);
 
+
             fgl.uniform.mode = 0.0;
             fgl.uniform.uColor = Colors.rgba(color, alpha);;
-
             gl.ext.drawArraysInstancedANGLE(gl.LINE_STRIP, 0, numDims, numRows);
+
+            if(typeof highlight == 'number') {
+                console.log('highlight');
+                fgl.uniform.highlightFlag = 1;
+                gl.lineWidth(2);
+                gl.ext.drawArraysInstancedANGLE(gl.LINE_STRIP, 0, numDims, numRows);
+                fgl.uniform.highlightFlag = 0;
+            }
+
+            // if(Array.isArray(ids)) {
+            //
+            //     var elmBuffer = gl.createBuffer()
+            //     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, elmBuffer);
+            //     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(ids), gl.STATIC_DRAW);
+            //     gl.enableVertexAttribArray(elmBuffer);
+            //     gl.ext.vertexAttribDivisorANGLE(elmBuffer, 0);
+            //     // gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+            //     fgl.uniform.uColor = Colors.rgba('yellow', 1.0);
+            //     gl.ext.drawElementsInstancedANGLE(gl.LINE_STRIP, numDims, gl.UNSIGNED_SHORT, 0, ids.length)
+            // }
             // gl.finish();
 
         }
@@ -263,6 +310,11 @@ define(function(require){
             fgl.texture.filter = filter;
             // compute();
             render();
+        }
+
+        this.select = function(ids) {
+            fgl.texture.highlightData = new Float32Array(ids);
+            render(1);
         }
 
         this.canvas.push(fgl.canvas);

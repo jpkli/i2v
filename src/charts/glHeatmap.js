@@ -82,7 +82,7 @@ define(function(require){
             if(selected)
                 gl_FragColor = vec4(color, a);
             else
-                gl_FragColor = vec4(color, a);
+                gl_FragColor = vec4(0.0, 0.0, 0.0, a);
         });
 
         var gl = fgl.program("heatmap");
@@ -95,8 +95,8 @@ define(function(require){
             scale: "ordinal",
             domain: seq(0, size-1),
             ticks: 10,
-            labelPos: {x: 0, y: 5},
-            autoHide: true
+            labelPos: {x: 0, y: 0},
+            // autoHide: true
             // format: format(".3s")
         });
 
@@ -107,8 +107,8 @@ define(function(require){
             scale: "ordinal",
             domain: seq(0, size-1).reverse(),
             ticks: 10,
-            labelPos: {x: -5, y: -4},
-            autoHide: true
+            labelPos: {x: 0, y: -4},
+            // autoHide: true
             // format: format(".3s")
         });
 
@@ -137,8 +137,34 @@ define(function(require){
                 oncomplete([yAxis.invert(d.y[0]), yAxis.invert(d.y[1])]);
             }
         })
+        var legend = svg.append("g");
+        legend.append("g")
+          .append("text")
+            // .attr("transform", "rotate(-90)")
+            .attr("class", "i2v-axis-title")
+            .attr("y", 0)
+            .attr("x", this.$width/2 + this.$padding.left)
+            .attr("dy", ".85em")
+            .style('font-size', '1.2em')
+            .style("text-anchor", "middle")
+            .style(" text-transform", "capitalize")
+            .text('group id');
 
+            legend.append("g")
+              .append("text")
+                .attr("class", "i2v-axis-title")
+                .attr("transform", "rotate(-90)")
+                .attr("y", 0)
+                .attr("x", -this.$height/2 - this.$padding.top)
+                .attr("dy", ".85em")
+                .style('font-size', '1.2em')
+                .style("text-anchor", "middle")
+                .style(" text-transform", "capitalize")
+                .text('group id');
         plot.translate(this.$padding.left, this.$padding.top);
+
+
+
 
         function render() {
             gl.clearColor( 0.0, 0.0, 0.0, 0.0 );
