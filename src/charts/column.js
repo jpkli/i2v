@@ -34,12 +34,12 @@ define(function(require){
         brush.width = this.$width;
         brush.height = this.$height;
 
-        if(brush.x || brush.y){
+        // if(brush.x || brush.y){
             brush.x = x;
             // brush.y = y;
             brush.container = barChart;
-            selector = new Selector(brush);
-        }
+            var selector = new Selector(brush);
+        // }
 
         var x = Axis({
             container: barChart,

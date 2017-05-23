@@ -18,7 +18,7 @@ define(function(require){
             onclick = option.onclick || function(d) {console.log(d);},
             bars = barChart.append("g");
 
-        domain = stats.domains(this.data, Object.keys(vmap).map(function(vk) {return vmap[vk];}));
+        // domain = stats.domains(this.data, Object.keys(vmap).map(function(vk) {return vmap[vk];}));
 
 
         chart.highlight = function() {
@@ -76,27 +76,27 @@ define(function(require){
 
         var columns = [];
 
-        this.data.forEach(function(d, i){
-            var bar = bars.append("rect")
-                .Attr({
-                    x: (i + 0.05) * barWidth,
-                    y: y(d[vmap.size]),
-                    width: barWidth * 0.9,
-                    height: that.$height - y(d[vmap.size]),
-                    fill: colorScale(d[vmap.color])
-                });
-
-            columns.push(bar);
-
-            bar.onclick = function() {
-                columns.forEach(function(c){
-                    c.attr("fill", color);
-                });
-                this.attr("fill", "#A00");
-                onclick(i);
-            }
-
-        });
+        // this.data.forEach(function(d, i){
+        //     var bar = bars.append("rect")
+        //         .Attr({
+        //             x: (i + 0.05) * barWidth,
+        //             y: y(d[vmap.size]),
+        //             width: barWidth * 0.9,
+        //             height: that.$height - y(d[vmap.size]),
+        //             fill: colorScale(d[vmap.color])
+        //         });
+        //
+        //     columns.push(bar);
+        //
+        //     bar.onclick = function() {
+        //         columns.forEach(function(c){
+        //             c.attr("fill", color);
+        //         });
+        //         this.attr("fill", "#A00");
+        //         onclick(i);
+        //     }
+        //
+        // });
 
         // bars.render({
         //     mark: "rect",
@@ -111,27 +111,27 @@ define(function(require){
 
         var legend = barChart.append("g");
 
-        legend.append("g")
-          .append("text")
-            .attr("transform", "rotate(-90)")
-            .attr("y", 10)
-            .attr("x", -this.$height/2 - this.$padding.top)
-            .attr("dy", ".85em")
-            .css("text-anchor", "middle")
-            .css("font-size", "16px")
-            .css(" text-transform", "capitalize")
-            .text(vmap.size.split("_").join(" "));
-
-        legend.append("g")
-          .append("text")
-            // .attr("transform", "rotate(-90)")
-            .attr("y", this.$height + this.$padding.bottom /2 + this.$padding.top )
-            .attr("x", this.$width/2 + this.$padding.left)
-            .attr("dy", ".85em")
-            .css("text-anchor", "middle")
-            .css("font-size", "16px")
-            .css(" text-transform", "capitalize")
-            .text(vmap.x.split("_").join(" "));
+        // legend.append("g")
+        //   .append("text")
+        //     .attr("transform", "rotate(-90)")
+        //     .attr("y", 10)
+        //     .attr("x", -this.$height/2 - this.$padding.top)
+        //     .attr("dy", ".85em")
+        //     .css("text-anchor", "middle")
+        //     .css("font-size", "16px")
+        //     .css(" text-transform", "capitalize")
+        //     .text(vmap.size.split("_").join(" "));
+        //
+        // legend.append("g")
+        //   .append("text")
+        //     // .attr("transform", "rotate(-90)")
+        //     .attr("y", this.$height + this.$padding.bottom /2 + this.$padding.top )
+        //     .attr("x", this.$width/2 + this.$padding.left)
+        //     .attr("dy", ".85em")
+        //     .css("text-anchor", "middle")
+        //     .css("font-size", "16px")
+        //     .css(" text-transform", "capitalize")
+        //     .text(vmap.x.split("_").join(" "));
 
         this.svg.push(barChart);
         this.viz();

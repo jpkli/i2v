@@ -16,6 +16,7 @@ define(function(require){
         if(typeof(arg) === "string") colors = brew(arg);
         else if(typeof(arg) === "number") colors = brew("Paired", arg);
         else if(Array.isArray(arg)) colors = arg;
+        else colors = brew("Set2");
 
         function brew(s, n){
             var n = n || 12;

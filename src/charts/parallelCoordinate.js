@@ -19,7 +19,7 @@ define(function(require){
             vmap = option.vmap,
             title = option.title,
             color = option.color || "steelblue",
-            domains = option.domains,
+            domains = option.domains || false,
             plot = svg.append("g"),
             numRows = option.size || this.data.size,
             numDims = features.length,
@@ -30,7 +30,7 @@ define(function(require){
             labels = svg.append("g");
 
         var fgl = new FlexGL({
-            width: this.$width,
+            width: this.$width ,
             height: this.$height,
             padding: this.$padding,
         });
@@ -68,25 +68,36 @@ define(function(require){
             fgl.texture.data.update(new Float32Array(texData[f]), [0, i], [numRows, 1]);
         });
 
+        if(!domains) {
+            domains = {};
+            features.forEach(function(f){
+                var min = texData[f].reduce(function(a, b) {return ( a < b ? a : b );}),
+                    max = texData[f].reduce(function(a, b) {return ( a > b ? a : b );});
+                domains[f] = [min, max];
+            })
+        }
+
+
         features.forEach(function(f, i){
             var axisOption = {
                 container: svg,
                 align: "left",
-                position: i * axisDist,
+                position: i * axisDist ,
                 dim: "y",
+                height: self.$height,
                 domain: domains[f],
-
                 tickInterval: "auto",
-                ticks: Math.ceil(self.$height / 100),
+                ticks: 6,
                 labelPos: {x: -5, y: -4},
                 format: format(".3s")
                 // grid: 1,
-
             };
             if(formats.hasOwnProperty(f)) axisOption.format = formats[f];
             if(showAxis[i] == 0) axisOption.autoHide = true;
 
             yAxis[i] = axis(axisOption);
+            if(yAxis[i].hasOwnProperty('svg'))
+                // yAxis[i].svg.translate(0, self.$padding.bottom+self.$padding.top - 10)
 
             if(showAxis[i] == 1){
                 var axisSelect = selectors.append("g")
@@ -126,7 +137,7 @@ define(function(require){
                   .attr("x", self.$padding.left + i * axisDist)
                   .attr("dy", "1em")
                   .css("text-anchor", "end")
-                  .css("font-size", "1.25em")
+                  .css("font-size", "1.1em")
                   .text(labelName);
               }
         })
@@ -155,7 +166,6 @@ define(function(require){
             highlightResult = -1.0;
             if(highlightFlag == 1)
                 highlightResult = texture2D(highlightData, vec2(r, 0)).a;
-
 
             gl_Position = vec4(x, y, 0.0, 1.0);
         });

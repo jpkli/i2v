@@ -42,18 +42,18 @@ define(function(require) {
                 preserveAspectRatio: 'none'
             };
             setAttr(svg, defaultAttr);
+        }
 
-            self.innerWidth = function() {
-                return width;
-            }
+        self.innerWidth = function() {
+            return width;
+        }
 
-            self.innerHeight = function() {
-                return height;
-            }
+        self.innerHeight = function() {
+            return height;
+        }
 
-            self.padding = function() {
-                return padding;
-            }
+        self.padding = function() {
+            return padding;
         }
 
         if(style) setStyle(svg, style);

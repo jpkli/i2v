@@ -17,9 +17,9 @@ define(function(require){
             domain      = option.domain || [0,1],
             width       = option.width || svg.innerWidth(),
             height      = option.height || svg.innerHeight(),
-            padding     = option.padding || svg.padding(),
+            padding     = option.padding || svg.padding() || {left: 0, right: 0, top: 0, bottom: 0},
             range       = option.range || (dim == "x") ? [0, width] : [height, 0],
-            styles      = {stroke: color, 'stroke-width': 0.5},
+            styles      = {stroke: color, 'stroke-width': 0.7},
             ticks       = option.ticks,
             tickLength  = option.tickLength || 6,
             tickPosition = option.tickPosition || 0,
@@ -184,6 +184,7 @@ define(function(require){
                 var tickLabelAlign = "end";
                 if(align=="right") tickLabelAlign = "begin";
                 if (dim == 'x') tickLabelAlign = "middle";
+                if (dim == 'x' && labelAngel) tickLabelAlign = "end";
 
                 var tickLabel = svgTicks.append("text")
                     .Attr({
@@ -217,6 +218,10 @@ define(function(require){
             axis.translate(padding.left, padding.top);
             return axis;
         };
+
+        metric.remove = function() {
+            axis.remove();
+        }
 
         if(!autoHide) {
             metric.svg = metric.show();

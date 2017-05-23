@@ -164,8 +164,6 @@ define(function(require){
         plot.translate(this.$padding.left, this.$padding.top);
 
 
-
-
         function render() {
             gl.clearColor( 0.0, 0.0, 0.0, 0.0 );
             gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );

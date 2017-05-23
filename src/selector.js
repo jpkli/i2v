@@ -5,28 +5,32 @@ define(function(require){
             container = option.container || this.svg[0],
             width = option.width || this.$width,
             height = option.height || this.$height,
-            x = function(d) {return d},
-            y = function(d) {return d},
+            x = function(s) {return s},
+            y = function(s) {return s},
             selectX = option.x || false,
             selectY = option.y || false,
             border = option.border || "#FFF",
-            color = option.color || "#AAA",
+            color = option.color || "#111",
             brush = option.brush || function() {},
             brushstart = option.brushstart || function() {},
             brushend = option.brushend || function() {};
 
-        if(typeof(option.x) === "function") {
-            x = option.x;
+        if(typeof(selectX) === "function") {
+            x = selectX;
             selectX = true;
         }
 
-        if(typeof(option.y) === "function") {
-            y = option.y;
+        if(typeof(selectY) === "function") {
+            y = selectY;
             selectY = true;
         }
 
         this.x = function(xMap) {
             if(typeof xMap === "function") x = xMap;
+        }
+
+        this.y = function(yMap) {
+            if(typeof yMap === "function") y = yMap;
         }
 
         var base = container.append("g")
@@ -46,7 +50,7 @@ define(function(require){
             .attr("y", 0)
             .attr("width", 0)
             .attr("height", 0)
-            .attr("fill-opacity", 0.4)
+            .attr("fill-opacity", 0.1)
             .css("fill", color)
             .css("stroke", border)
             .css("cursor", "move");
@@ -119,7 +123,7 @@ define(function(require){
                         if(dx<0 && dy<0) selector.attr("x", x0).attr("y", y0);
                     }
                     if(selectX)
-                        selection.x = [ x(selectorBox.left - box.left), x(selectorBox.right - box.left)];
+                        selection.x = [ x(selectorBox.left - box.left ), x(selectorBox.right - box.left )];
 
                     if(selectY)
                         selection.y = [y(selectorBox.top - box.top), y(selectorBox.bottom - box.top)];

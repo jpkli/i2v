@@ -77,6 +77,7 @@ define(function(require){
                 width: width,
                 height: height,
                 padding: padding,
+                style: {position: 'absolute'}
             });
         }
         /* Public */
@@ -94,6 +95,7 @@ define(function(require){
             // container = (containerId == "body") ? document.body : document.getElementById(containerId);
 
             this.div.className = option.className || "i2v-viz";
+            this.div.style.position = 'relative';
             this.resize(
                 this.$width + this.$padding.left + this.$padding.right,
                 this.$height + this.$padding.top + this.$padding.bottom
@@ -162,6 +164,22 @@ define(function(require){
         this.encode = function(attr, feature, scale) {
 
         };
+
+        this.hide = function() {
+            this.div.style.display = 'none';
+        }
+
+        this.show = function() {
+            this.div.style.display = 'block';
+        }
+
+        this.innerWidth = function() {
+            return this.$width;
+        }
+
+        this.innerHeight = function() {
+            return this.$height;
+        }
 
         return viz.init();
     });
