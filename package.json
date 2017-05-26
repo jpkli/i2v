@@ -8,7 +8,7 @@
   },
   "scripts": {
     "build": "browserify src/index.js -o ./i2v.js",
-    "test": "echo hi"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
