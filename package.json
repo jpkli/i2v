@@ -1,6 +1,6 @@
 {
   "name": "i2v",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "A JavaScript library for interactive and integrated visualization. ",
   "main": "index.js",
   "directories": {
@@ -12,7 +12,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "."
+    "url": "https://github.com/jpkli/i2v.git"
   },
   "keywords": [
     "visualization",
@@ -29,8 +29,5 @@
     "mocha": "^3.1.2"
   },
   "dependencies": {
-    "body-parser": "^1.15.2",
-    "express": "^4.14.0",
-    "promise": "^7.1.1"
   }
 }
