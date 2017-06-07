@@ -1,6 +1,6 @@
 {
   "name": "i2v",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A JavaScript library for interactive and integrated visualization. ",
   "main": "index.js",
   "directories": {
@@ -27,7 +27,5 @@
     "browserify": "^12.0.1",
     "chai": "^3.5.0",
     "mocha": "^3.1.2"
-  },
-  "dependencies": {
   }
 }
