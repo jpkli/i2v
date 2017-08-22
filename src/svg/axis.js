@@ -7,7 +7,7 @@ define(function(require){
             svg         = option.container || option.parent,
             dim         = option.dim || "x",
             labelPos    = option.labelPos || option.labelPosition || {x: 0, y: 0},
-            labelAngel  = option.labelAngel || 0,
+            labelAngel  = option.labelAngle || option.labelAngel || 0,
             color       = option.color || "#000",
             position    = option.position || 0,
             align       = option.align || "",
@@ -22,7 +22,7 @@ define(function(require){
             styles      = {stroke: color, 'stroke-width': 0.7},
             ticks       = option.ticks,
             tickLength  = option.tickLength || 6,
-            tickPosition = option.tickPosition || 0,
+            tickPosition = option.tickPosition || [0, 0],
             tickInterval= option.tickInterval || "auto",
             tickAlign = option.tickAlign || "center",
             tickFormat  = option.tickFormat || null,
@@ -161,15 +161,15 @@ define(function(require){
             for(var i = 0; i < di.length; i++) {
                 var x1,x2,y1,y2;
                 if(dim == 'x'){
-                    x1 = x2 = metric(di[i]);
-                    y1 = position + tickPosition + tickLength;
+                    x1 = x2 = metric(di[i]) + tickPosition[0];
+                    y1 = position + tickPosition[1] + tickLength;
                     y2 = y1 - tickLength;
                 } else {
                     if(scale == "categorical" || scale == "ordinal")
                         y1 = y2 = height - metric(di[i]);
                     else
-                        y1 = y2 = metric(di[i]);
-                    x1 = position + tickPosition ;
+                        y1 = y2 = metric(di[i]) + tickPosition[1];
+                    x1 = position + tickPosition[0] ;
                     x2 = x1 - tickLength;
                 }
 
@@ -192,7 +192,7 @@ define(function(require){
                         y: y2 - labelPos.y,
                         // class: "labels",
                         class: "i2v-axis-label",
-                        "font-size": "1.em",
+                        "font-size": "1.0em",
                         textAnchor: tickLabelAlign
                     });
                 if(labelAngel) tickLabel.attr("transform", "rotate(" + [labelAngel, (x2 + labelPos.x), (y2 - labelPos.y)].join(",")+")");

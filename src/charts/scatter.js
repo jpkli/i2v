@@ -170,7 +170,7 @@ define(function(require){
                 .style("text-anchor", "middle")
                 .style(" text-transform", "capitalize")
                 .text(axisTitle);
-            }
+        }
 
         if(option.title) {
             legend.append("g")
